@@ -7,6 +7,12 @@ import type {
   Order,
   PaginatedResponse,
   Product,
+  ProductBulkAction,
+  ProductFilterOptions,
+  ProductInput,
+  ProductListResponse,
+  ProductQuery,
+  ProductStats,
   User,
 } from "../types";
 
@@ -129,39 +135,52 @@ class ApiClient {
   }
 
   // Products
-  getProducts(page = 1, search = "") {
-    return this.get<PaginatedResponse<Product>>(
-      `/admin/products?page=${page}&search=${encodeURIComponent(search)}`,
-    );
+  getProducts(query: ProductQuery = {}) {
+    const params = new URLSearchParams();
+
+    for (const [key, value] of Object.entries(query)) {
+      if (value === undefined || value === null || value === "") continue;
+
+      if (Array.isArray(value)) {
+        if (value.length > 0) params.set(key, value.join(","));
+        continue;
+      }
+
+      params.set(key, typeof value === "boolean" ? (value ? "1" : "0") : String(value));
+    }
+
+    return this.get<ProductListResponse>(`/admin/products?${params.toString()}`);
   }
 
   getProduct(id: number) {
     return this.get<{ data: Product }>(`/admin/products/${id}`);
   }
 
-  createProduct(data: FormData) {
-    return this.upload<{ data: Product }>("/admin/products", data);
+  createProduct(data: ProductInput) {
+    return this.post<{ data: Product }>("/admin/products", data);
   }
 
-  updateProduct(id: number, data: FormData) {
-    return this.upload<{ data: Product }>(`/admin/products/${id}`, data);
+  updateProduct(id: number, data: ProductInput) {
+    return this.put<{ data: Product }>(`/admin/products/${id}`, data);
   }
 
   deleteProduct(id: number) {
     return this.delete(`/admin/products/${id}`);
   }
 
-  importProducts(file: File) {
-    const fd = new FormData();
-    fd.append("file", file);
-    return this.upload<{ imported: number; errors: string[] }>(
-      "/admin/products/import",
-      fd,
-    );
+  bulkProducts(action: ProductBulkAction, ids: number[]) {
+    return this.post<{ message: string; affected: number }>("/admin/products/bulk", {
+      action,
+      ids,
+    });
   }
 
-  exportProducts() {
-    return this.get<Blob>("/admin/products/export");
+  getProductFilterOptions() {
+    return this.get<{ data: ProductFilterOptions }>("/admin/products/filters");
+  }
+
+  getProductStats(days = 30) {
+    return this.get<{ data: ProductStats }>(`/admin/products/stats?days=${days}`);
   }
 
   // Collections

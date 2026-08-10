@@ -1,0 +1,1 @@
+export { PCard } from "./card";

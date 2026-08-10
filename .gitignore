@@ -56,3 +56,4 @@ Homestead.yaml
 # Auth tokens / secrets
 *.pem
 *.key
+.gstack/

@@ -17,7 +17,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
 
-    // Admin: Products
+    // Admin: Products (las rutas fijas van antes del apiResource para no chocar con /{product})
+    Route::get('/admin/products/filters', [ProductController::class, 'filterOptions']);
+    Route::get('/admin/products/stats', [ProductController::class, 'stats']);
+    Route::post('/admin/products/bulk', [ProductController::class, 'bulk']);
     Route::apiResource('/admin/products', ProductController::class);
 
     // Admin: Collections

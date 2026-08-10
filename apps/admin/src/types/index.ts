@@ -7,18 +7,36 @@ export interface User {
   updated_at: string;
 }
 
+export type ProductStatus = "draft" | "active" | "archived";
+
 export interface Product {
   id: number;
   name: string;
   slug: string;
   description: string;
+  vendor: string | null;
+  product_type: string | null;
   base_price: number;
+  compare_at_price: number | null;
+  cost_per_item: number | null;
   is_personalizable: boolean;
-  status: "draft" | "active" | "archived";
+  track_inventory: boolean;
+  continue_selling_when_out_of_stock: boolean;
+  status: ProductStatus;
+  channels_count: number;
+  catalogs_count: number;
+  tags: string[] | null;
+  seo_title: string | null;
+  seo_description: string | null;
+  published_at: string | null;
   collection_id: number | null;
-  collection?: Collection;
+  collection?: Collection | null;
+  category_id: number | null;
+  category?: Category | null;
   variants: ProductVariant[];
   images: ProductImage[];
+  total_inventory: number;
+  variants_count: number;
   created_at: string;
   updated_at: string;
 }
@@ -27,13 +45,126 @@ export interface ProductVariant {
   id: number;
   product_id: number;
   sku: string;
+  barcode: string | null;
   name: string;
   price_adjustment: number;
   stock: number;
-  attributes: Record<string, string>;
+  position: number;
+  attributes: Record<string, string> | null;
   created_at: string;
   updated_at: string;
 }
+
+/** Payload de creación/edición: variantes e imágenes se sincronizan completas. */
+export interface ProductInput {
+  name?: string;
+  slug?: string | null;
+  description?: string | null;
+  vendor?: string | null;
+  product_type?: string | null;
+  base_price?: number;
+  compare_at_price?: number | null;
+  cost_per_item?: number | null;
+  is_personalizable?: boolean;
+  track_inventory?: boolean;
+  continue_selling_when_out_of_stock?: boolean;
+  status?: ProductStatus;
+  channels_count?: number;
+  catalogs_count?: number;
+  tags?: string[];
+  seo_title?: string | null;
+  seo_description?: string | null;
+  collection_id?: number | null;
+  category_id?: number | null;
+  variants?: ProductVariantInput[];
+  images?: ProductImageInput[];
+}
+
+export interface ProductVariantInput {
+  id?: number;
+  sku: string;
+  barcode?: string | null;
+  name: string;
+  price_adjustment: number;
+  stock: number;
+  attributes?: Record<string, string>;
+}
+
+export interface ProductImageInput {
+  id?: number;
+  url: string;
+  alt?: string | null;
+}
+
+export type ProductSort =
+  | "created_desc"
+  | "created_asc"
+  | "updated_desc"
+  | "updated_asc"
+  | "title_asc"
+  | "title_desc"
+  | "price_asc"
+  | "price_desc"
+  | "inventory_asc"
+  | "inventory_desc";
+
+export type StockFilter = "in_stock" | "low_stock" | "out_of_stock" | "not_tracked";
+
+export interface ProductQuery {
+  page?: number;
+  per_page?: number;
+  search?: string;
+  status?: ProductStatus | "all";
+  sort?: ProductSort;
+  vendor?: string[];
+  product_type?: string[];
+  category_id?: number[];
+  collection_id?: number[];
+  tag?: string[];
+  stock?: StockFilter | "";
+  personalizable?: boolean | null;
+}
+
+export interface ProductTabCounts {
+  all: number;
+  active: number;
+  draft: number;
+  archived: number;
+}
+
+export interface ProductListResponse extends PaginatedResponse<Product> {
+  counts: ProductTabCounts;
+  from: number | null;
+  to: number | null;
+}
+
+export interface ProductFilterOptions {
+  vendors: string[];
+  product_types: string[];
+  categories: { id: number; name: string }[];
+  collections: { id: number; name: string }[];
+  tags: string[];
+}
+
+export interface ProductStats {
+  days: number;
+  sell_through_rate: number;
+  units_sold: number;
+  units_on_hand: number;
+  days_of_inventory: Record<"0-30" | "30-60" | "60-90" | "90+" | "unknown", number>;
+  abc: {
+    total_revenue: number;
+    grades: Record<"A" | "B" | "C", { count: number; revenue: number }>;
+  };
+}
+
+export type ProductBulkAction =
+  | "activate"
+  | "draft"
+  | "archive"
+  | "delete"
+  | "personalizable_on"
+  | "personalizable_off";
 
 export interface ProductImage {
   id: number;

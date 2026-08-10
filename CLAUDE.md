@@ -131,7 +131,10 @@ php artisan serve           # http://localhost:8000
 | POST | `/api/auth/login` | No | Login (retorna token) |
 | GET | `/api/auth/me` | Sanctum | Usuario autenticado |
 | POST | `/api/auth/logout` | Sanctum | Cerrar sesión |
-| GET/POST/PUT/DELETE | `/api/admin/products` | Sanctum | CRUD productos |
+| GET/POST/PUT/DELETE | `/api/admin/products` | Sanctum | CRUD productos (sincroniza variantes e imágenes) |
+| GET | `/api/admin/products/filters` | Sanctum | Valores para filtros (vendors, tipos, categorías, colecciones, tags) |
+| GET | `/api/admin/products/stats` | Sanctum | Métricas: sell-through, días de inventario, análisis ABC |
+| POST | `/api/admin/products/bulk` | Sanctum | Acciones masivas (activate, draft, archive, delete, personalizable_on/off) |
 | GET/POST/PUT/DELETE | `/api/admin/collections` | Sanctum | CRUD colecciones |
 | GET | `/api/admin/orders` | Sanctum | Listar órdenes |
 | GET | `/api/admin/orders/{id}` | Sanctum | Ver orden |
@@ -156,8 +159,11 @@ Password: password
 ### Tablas
 
 - `users` — Admin users (Sanctum auth)
-- `products` — Productos con soft deletes
-- `product_variants` — Variantes (SKU, stock, precio, atributos JSON)
+- `products` — Productos con soft deletes. Además de los campos base incluye `vendor`,
+  `product_type`, `category_id`, `compare_at_price`, `cost_per_item`, `track_inventory`,
+  `continue_selling_when_out_of_stock`, `channels_count`, `catalogs_count`, `tags` (JSON),
+  `seo_title`, `seo_description` y `published_at`
+- `product_variants` — Variantes (SKU, código de barras, stock, ajuste de precio, posición, atributos JSON)
 - `product_images` — Imágenes por producto
 - `collections` — Colecciones manuales/automáticas
 - `categories` — Categorías jerárquicas
@@ -186,7 +192,9 @@ El proxy de Vite redirige `/api/*` a `http://localhost:8000`.
 |---|---|---|
 | `/login` | Login | `pages/auth/login.page.tsx` |
 | `/admin` | Dashboard (KPIs + top products) | `pages/admin/dashboard.page.tsx` |
-| `/admin/products` | CRUD productos con búsqueda y paginación | `pages/admin/products.page.tsx` |
+| `/admin/products` | Índice estilo Shopify: métricas, tabs, filtros, columnas configurables, acciones masivas | `pages/admin/products.page.tsx` |
+| `/admin/products/new` | Alta de producto (mismo editor) | `pages/admin/product-detail.page.tsx` |
+| `/admin/products/:id` | Editor de producto estilo Polaris (precios, inventario, variantes, SEO, organización) | `pages/admin/product-detail.page.tsx` |
 | `/admin/collections` | Colecciones (grid de cards) | `pages/admin/collections.page.tsx` |
 | `/admin/orders` | Órdenes con filtro por estado | `pages/admin/orders.page.tsx` |
 | `/admin/customers` | Clientes con búsqueda | `pages/admin/customers.page.tsx` |
@@ -211,6 +219,20 @@ Clase singleton que maneja todas las llamadas HTTP:
 - `upload<T>()` (multipart/form-data sin Content-Type header)
 - Auto-attach del Bearer token
 - Auto-redirect en 401
+
+### Capa visual Polaris (módulo de productos)
+
+El módulo de productos replica el admin de Shopify. Vive en dos carpetas y **no** afecta
+al resto del panel, que conserva el estilo índigo original:
+
+- `components/polaris/` — primitivas con la estética de Shopify: `PButton`, `PCard`, `Badge`,
+  `Checkbox`, `Popover`, `TextField`, `PSelect`, `Modal`, `Icon`, `useToast`, `PolarisFrame`, `PPage`.
+- `components/products/` — piezas del módulo: `ProductInsights`, `ProductToolbar`,
+  `ProductIndexTable`, `ProductImportModal`, `InventoryCell`, `ProductStatusBadge`, `ProductThumbnail`.
+
+Los tokens de color y sombra están en `src/index.css` dentro de `@theme` (`bg-shell`,
+`text-ink-sub`, `border-line`, `shadow-(--shadow-card)`, etc.). `PolarisFrame` cancela el
+padding del `AdminLayout` para que el lienzo gris llegue a los bordes.
 
 ### Convenciones de componentes
 

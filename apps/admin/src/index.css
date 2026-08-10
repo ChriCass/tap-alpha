@@ -1,1 +1,43 @@
 @import "tailwindcss";
+
+/*
+ * Tokens de la superficie tipo Shopify (Polaris) usados por el módulo de productos.
+ * Se exponen como utilidades de Tailwind: bg-surface, text-ink, border-line, etc.
+ */
+@theme {
+  --color-shell: #f1f1f1;
+  --color-surface: #ffffff;
+  --color-surface-sub: #fafafa;
+  --color-surface-hover: #f7f7f7;
+  --color-surface-active: #f0f0f0;
+  --color-surface-inverse: #303030;
+
+  --color-line: #e3e3e3;
+  --color-line-strong: #d5d5d5;
+
+  --color-ink: #303030;
+  --color-ink-sub: #616161;
+  --color-ink-muted: #8a8a8a;
+  --color-ink-disabled: #b5b5b5;
+  --color-ink-inverse: #ffffff;
+
+  --color-link: #005bd3;
+
+  --color-success-bg: #cdfee1;
+  --color-success-ink: #0c5132;
+  --color-info-bg: #e0f0ff;
+  --color-info-ink: #00527c;
+  --color-warning-bg: #ffd6a4;
+  --color-warning-ink: #5e4200;
+  --color-critical-bg: #ffe9e8;
+  --color-critical-ink: #8e0b21;
+
+  --color-warning-text: #b98900;
+  --color-critical-text: #c62b1f;
+
+  --shadow-card: 0 0 0 1px rgba(0, 0, 0, 0.04), 0 1px 0 rgba(0, 0, 0, 0.05);
+  --shadow-button: 0 -1px 0 0 #b5b5b5 inset, 0 0 0 1px rgba(0, 0, 0, 0.1) inset, 0 1px 0 0 rgba(255, 255, 255, 0.2) inset;
+  --shadow-button-primary: 0 -1px 0 0 #000 inset, 0 1px 0 0 rgba(255, 255, 255, 0.2) inset;
+  --shadow-popover: 0 4px 12px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  --shadow-savebar: 0 4px 12px rgba(0, 0, 0, 0.2);
+}

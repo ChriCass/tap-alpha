@@ -6,6 +6,7 @@ import { AdminLayout } from "./layouts/admin.layout";
 import { LoginPage } from "./pages/auth/login.page";
 import { DashboardPage } from "./pages/admin/dashboard.page";
 import { ProductsPage } from "./pages/admin/products.page";
+import { ProductDetailPage } from "./pages/admin/product-detail.page";
 import { CollectionsPage } from "./pages/admin/collections.page";
 import { OrdersPage } from "./pages/admin/orders.page";
 import { CustomersPage } from "./pages/admin/customers.page";
@@ -60,6 +61,8 @@ export default function App() {
             >
               <Route path="/admin" element={<DashboardPage />} />
               <Route path="/admin/products" element={<ProductsPage />} />
+              <Route path="/admin/products/new" element={<ProductDetailPage />} />
+              <Route path="/admin/products/:id" element={<ProductDetailPage />} />
               <Route path="/admin/collections" element={<CollectionsPage />} />
               <Route path="/admin/orders" element={<OrdersPage />} />
               <Route path="/admin/customers" element={<CustomersPage />} />
