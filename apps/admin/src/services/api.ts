@@ -2,6 +2,11 @@ import type {
   ApiError,
   Analytics,
   Collection,
+  CollectionBulkAction,
+  CollectionInput,
+  CollectionListResponse,
+  CollectionQuery,
+  CollectionRuleOptions,
   Coupon,
   Customer,
   Order,
@@ -134,8 +139,8 @@ class ApiClient {
     return this.post("/auth/logout");
   }
 
-  // Products
-  getProducts(query: ProductQuery = {}) {
+  /** Serializa un objeto de filtros: omite vacíos y une los arrays por comas. */
+  private toQueryString(query: object): string {
     const params = new URLSearchParams();
 
     for (const [key, value] of Object.entries(query)) {
@@ -149,7 +154,12 @@ class ApiClient {
       params.set(key, typeof value === "boolean" ? (value ? "1" : "0") : String(value));
     }
 
-    return this.get<ProductListResponse>(`/admin/products?${params.toString()}`);
+    return params.toString();
+  }
+
+  // Products
+  getProducts(query: ProductQuery = {}) {
+    return this.get<ProductListResponse>(`/admin/products?${this.toQueryString(query)}`);
   }
 
   getProduct(id: number) {
@@ -184,9 +194,9 @@ class ApiClient {
   }
 
   // Collections
-  getCollections(page = 1) {
-    return this.get<PaginatedResponse<Collection>>(
-      `/admin/collections?page=${page}`,
+  getCollections(query: CollectionQuery = {}) {
+    return this.get<CollectionListResponse>(
+      `/admin/collections?${this.toQueryString(query)}`,
     );
   }
 
@@ -194,16 +204,39 @@ class ApiClient {
     return this.get<{ data: Collection }>(`/admin/collections/${id}`);
   }
 
-  createCollection(data: Partial<Collection>) {
+  createCollection(data: CollectionInput) {
     return this.post<{ data: Collection }>("/admin/collections", data);
   }
 
-  updateCollection(id: number, data: Partial<Collection>) {
+  updateCollection(id: number, data: CollectionInput) {
     return this.put<{ data: Collection }>(`/admin/collections/${id}`, data);
   }
 
   deleteCollection(id: number) {
     return this.delete(`/admin/collections/${id}`);
+  }
+
+  duplicateCollection(id: number) {
+    return this.post<{ data: Collection }>(`/admin/collections/${id}/duplicate`);
+  }
+
+  bulkCollections(action: CollectionBulkAction, ids: number[]) {
+    return this.post<{ message: string; affected: number }>("/admin/collections/bulk", {
+      action,
+      ids,
+    });
+  }
+
+  getCollectionRuleOptions() {
+    return this.get<{ data: CollectionRuleOptions }>("/admin/collections/rule-options");
+  }
+
+  /** Resuelve condiciones sin guardarlas, para la vista previa del editor. */
+  previewCollection(data: Pick<CollectionInput, "rules" | "rules_match" | "sort_order">) {
+    return this.post<{ data: { products_count: number; products: Product[] } }>(
+      "/admin/collections/preview",
+      data,
+    );
   }
 
   // Orders

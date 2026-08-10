@@ -16,7 +16,7 @@ return new class extends Migration
             $table->decimal('base_price', 10, 2)->default(0);
             $table->boolean('is_personalizable')->default(false);
             $table->string('status')->default('draft');
-            $table->foreignId('collection_id')->nullable()->constrained()->nullOnDelete();
+            // La relación con colecciones es N a N: vive en la tabla collection_product.
             $table->timestamps();
             $table->softDeletes();
         });

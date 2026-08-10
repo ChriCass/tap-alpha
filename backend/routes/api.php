@@ -23,7 +23,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/admin/products/bulk', [ProductController::class, 'bulk']);
     Route::apiResource('/admin/products', ProductController::class);
 
-    // Admin: Collections
+    // Admin: Collections (rutas fijas antes del apiResource)
+    Route::get('/admin/collections/rule-options', [CollectionController::class, 'ruleOptions']);
+    Route::post('/admin/collections/preview', [CollectionController::class, 'preview']);
+    Route::post('/admin/collections/bulk', [CollectionController::class, 'bulk']);
+    Route::post('/admin/collections/{collection}/duplicate', [CollectionController::class, 'duplicate']);
     Route::apiResource('/admin/collections', CollectionController::class);
 
     // Admin: Orders

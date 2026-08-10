@@ -1,58 +1,217 @@
 import { useCallback, useEffect, useState } from "react";
-import { Card } from "../../components/ui/card";
-import { Button } from "../../components/ui/button";
-import { LoadingSpinner } from "../../components/common/loading-spinner";
+import { useNavigate } from "react-router-dom";
+import {
+  Icon,
+  Modal,
+  PButton,
+  PCard,
+  PolarisFrame,
+  PPage,
+  useToast,
+} from "../../components/polaris";
+import { CollectionIndexTable, CollectionToolbar } from "../../components/collections";
 import { api } from "../../services/api";
-import type { Collection } from "../../types";
+import { downloadCsv, toCsv } from "../../utils/csv";
+import { describeRule } from "../../components/collections";
+import type {
+  Collection,
+  CollectionBulkAction,
+  CollectionListResponse,
+  CollectionQuery,
+} from "../../types";
+
+const EMPTY_COUNTS = { all: 0, manual: 0, automatic: 0 };
+
+const INITIAL_QUERY: CollectionQuery = {
+  page: 1,
+  per_page: 20,
+  type: "all",
+  sort: "created_desc",
+  search: "",
+};
 
 export function CollectionsPage() {
-  const [collections, setCollections] = useState<Collection[]>([]);
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const { showToast, toastMarkup } = useToast();
 
-  const fetch = useCallback(async () => {
+  const [query, setQuery] = useState<CollectionQuery>(INITIAL_QUERY);
+  const [list, setList] = useState<CollectionListResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const fetchCollections = useCallback(async () => {
     setLoading(true);
-    const res = await api.getCollections();
-    setCollections(res.data);
-    setLoading(false);
-  }, []);
+
+    try {
+      setList(await api.getCollections(query));
+    } catch (error) {
+      showToast((error as Error).message, "critical");
+    } finally {
+      setLoading(false);
+    }
+  }, [query, showToast]);
 
   useEffect(() => {
-    fetch();
-  }, [fetch]);
+    void fetchCollections();
+    setSelectedIds([]);
+  }, [fetchCollections]);
+
+  const patchQuery = (patch: Partial<CollectionQuery>) => {
+    setQuery((current) => ({ ...current, ...patch }));
+  };
+
+  const collections: Collection[] = list?.data ?? [];
+
+  const toggleRow = (id: number) => {
+    setSelectedIds((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+    );
+  };
+
+  const toggleAll = () => {
+    setSelectedIds((current) =>
+      current.length === collections.length ? [] : collections.map((collection) => collection.id),
+    );
+  };
+
+  const runBulkAction = async (action: CollectionBulkAction) => {
+    if (action === "delete") {
+      setConfirmDelete(true);
+
+      return;
+    }
+
+    try {
+      const res = await api.bulkCollections(action, selectedIds);
+      showToast(res.message);
+      setSelectedIds([]);
+      await fetchCollections();
+    } catch (error) {
+      showToast((error as Error).message, "critical");
+    }
+  };
+
+  const confirmBulkDelete = async () => {
+    try {
+      const res = await api.bulkCollections("delete", selectedIds);
+      showToast(res.message);
+      setSelectedIds([]);
+      setConfirmDelete(false);
+      await fetchCollections();
+    } catch (error) {
+      showToast((error as Error).message, "critical");
+    }
+  };
+
+  const handleExport = () => {
+    const rows: (string | number | null)[][] = [
+      ["nombre", "handle", "tipo", "productos", "condiciones", "canales", "publicada"],
+      ...collections.map((collection) => [
+        collection.name,
+        collection.slug,
+        collection.type,
+        collection.products_count ?? 0,
+        (collection.rules ?? []).map(describeRule).join(" | "),
+        collection.channels_count,
+        collection.published_at ? "sí" : "no",
+      ]),
+    ];
+
+    downloadCsv(`colecciones-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(rows));
+    showToast(`${collections.length} colecciones exportadas`);
+  };
+
+  const from = list?.from ?? 0;
+  const to = list?.to ?? 0;
+  const total = list?.total ?? 0;
+  const page = list?.current_page ?? 1;
+  const lastPage = list?.last_page ?? 1;
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold">Colecciones</h1>
-        <Button>+ Nueva colección</Button>
-      </div>
+    <PolarisFrame>
+      <PPage
+        title="Colecciones"
+        titleIcon="tag"
+        actions={
+          <>
+            <PButton onClick={handleExport} disabled={collections.length === 0}>
+              Exportar
+            </PButton>
+            <PButton variant="primary" onClick={() => navigate("/admin/collections/new")}>
+              Crear colección
+            </PButton>
+          </>
+        }
+      >
+        <PCard padding="none">
+          <CollectionToolbar
+            query={query}
+            counts={list?.counts ?? EMPTY_COUNTS}
+            selectedCount={selectedIds.length}
+            onChange={patchQuery}
+            onBulkAction={runBulkAction}
+            onClearSelection={() => setSelectedIds([])}
+          />
 
-      {loading ? (
-        <LoadingSpinner />
-      ) : (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">
-          {collections.map((c) => (
-            <Card key={c.id}>
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-semibold mb-1">{c.name}</h3>
-                  <p className="text-xs text-gray-500">
-                    {c.type === "manual" ? "Manual" : "Automática"} ·{" "}
-                    {c.products_count ?? 0} productos
-                  </p>
-                </div>
-                <div className="flex gap-1">
-                  <Button variant="ghost" size="sm">Editar</Button>
-                  <Button variant="ghost" size="sm" className="!text-red-600">Eliminar</Button>
-                </div>
-              </div>
-            </Card>
-          ))}
-          {collections.length === 0 && (
-            <p className="text-gray-500">No hay colecciones aún</p>
+          <CollectionIndexTable
+            collections={collections}
+            loading={loading}
+            selectedIds={selectedIds}
+            onToggleRow={toggleRow}
+            onToggleAll={toggleAll}
+          />
+
+          {total > 0 && (
+            <footer className="flex items-center justify-center gap-3 border-t border-line bg-surface-sub px-3 py-2">
+              <PButton
+                variant="tertiary"
+                size="slim"
+                icon="chevronLeft"
+                disabled={page <= 1}
+                onClick={() => patchQuery({ page: page - 1 })}
+                aria-label="Página anterior"
+              />
+              <span className="text-xs text-ink-sub">
+                {from}–{to} de {total}
+              </span>
+              <PButton
+                variant="tertiary"
+                size="slim"
+                icon="chevronRight"
+                disabled={page >= lastPage}
+                onClick={() => patchQuery({ page: page + 1 })}
+                aria-label="Página siguiente"
+              />
+            </footer>
           )}
-        </div>
-      )}
-    </div>
+        </PCard>
+
+        <p className="flex items-center justify-center gap-1.5 text-xs text-ink-sub">
+          <Icon name="info" className="size-3.5" />
+          Aprende más sobre <span className="text-link">colecciones</span>
+        </p>
+      </PPage>
+
+      <Modal
+        open={confirmDelete}
+        title={`¿Eliminar ${selectedIds.length} colecciones?`}
+        onClose={() => setConfirmDelete(false)}
+        footer={
+          <>
+            <PButton onClick={() => setConfirmDelete(false)}>Cancelar</PButton>
+            <PButton variant="critical" onClick={confirmBulkDelete}>
+              Eliminar
+            </PButton>
+          </>
+        }
+      >
+        <p className="text-[13px] text-ink-sub">
+          Los productos no se eliminan: solo dejan de pertenecer a estas colecciones.
+        </p>
+      </Modal>
+
+      {toastMarkup}
+    </PolarisFrame>
   );
 }

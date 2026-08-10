@@ -8,6 +8,7 @@ import { DashboardPage } from "./pages/admin/dashboard.page";
 import { ProductsPage } from "./pages/admin/products.page";
 import { ProductDetailPage } from "./pages/admin/product-detail.page";
 import { CollectionsPage } from "./pages/admin/collections.page";
+import { CollectionDetailPage } from "./pages/admin/collection-detail.page";
 import { OrdersPage } from "./pages/admin/orders.page";
 import { CustomersPage } from "./pages/admin/customers.page";
 import { CouponsPage } from "./pages/admin/coupons.page";
@@ -64,6 +65,8 @@ export default function App() {
               <Route path="/admin/products/new" element={<ProductDetailPage />} />
               <Route path="/admin/products/:id" element={<ProductDetailPage />} />
               <Route path="/admin/collections" element={<CollectionsPage />} />
+              <Route path="/admin/collections/new" element={<CollectionDetailPage />} />
+              <Route path="/admin/collections/:id" element={<CollectionDetailPage />} />
               <Route path="/admin/orders" element={<OrdersPage />} />
               <Route path="/admin/customers" element={<CustomersPage />} />
               <Route path="/admin/coupons" element={<CouponsPage />} />

@@ -25,6 +25,24 @@ const paths: Record<string, ReactNode> = {
       <path d="M9 4v16M15 4v16" />
     </>
   ),
+  grid: (
+    <>
+      <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" />
+      <rect x="13.5" y="3.5" width="7" height="7" rx="1.5" />
+      <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" />
+      <rect x="13.5" y="13.5" width="7" height="7" rx="1.5" />
+    </>
+  ),
+  list: (
+    <>
+      <path d="M9 6h11M9 12h11M9 18h11" />
+      <g fill="currentColor" stroke="none">
+        <circle cx="4.5" cy="6" r="1.3" />
+        <circle cx="4.5" cy="12" r="1.3" />
+        <circle cx="4.5" cy="18" r="1.3" />
+      </g>
+    </>
+  ),
   tag: (
     <>
       <path d="M3 11.5V5a2 2 0 0 1 2-2h6.5L21 12.5 12.5 21 3 11.5Z" />

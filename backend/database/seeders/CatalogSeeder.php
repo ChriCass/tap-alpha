@@ -37,8 +37,12 @@ class CatalogSeeder extends Seeder
                 'seo_description' => Str::limit($item['description'], 150),
                 'published_at' => ($item['status'] ?? 'active') === 'active' ? now()->subDays(60 - $index) : null,
                 'category_id' => $categories[$item['category']] ?? null,
-                'collection_id' => $collections[$item['collection']] ?? null,
             ]);
+
+            $product->collections()->sync(array_values(array_filter(array_map(
+                fn (string $name) => $collections[$name] ?? null,
+                array_merge([$item['collection']], $item['extra_collections'] ?? []),
+            ))));
 
             // Los timestamps no son fillable: se fijan aparte para escalonar el catálogo.
             $product->forceFill([
@@ -92,14 +96,58 @@ class CatalogSeeder extends Seeder
      */
     private function seedCollections(): array
     {
-        $names = ['Personalizables 3D', 'Verano 2026', 'Corporativo', 'Más vendidos'];
+        $manual = [
+            'Personalizables 3D' => 'Todo lo que se puede editar en el configurador 3D.',
+            'Verano 2026' => 'Selección de temporada.',
+            'Corporativo' => 'Pedidos por volumen para empresas.',
+            'Más vendidos' => 'Los productos con mayor rotación.',
+        ];
+
+        // Automáticas: se llenan solas según las condiciones, como en Shopify.
+        $automatic = [
+            'Regalos hasta S/ 50' => [
+                'description' => 'Ideas de regalo económicas.',
+                'rules' => [
+                    ['field' => 'price', 'operator' => 'less_than', 'value' => '50'],
+                ],
+                'rules_match' => 'all',
+            ],
+            'Selección premium' => [
+                'description' => 'Productos de gama alta personalizables.',
+                'rules' => [
+                    ['field' => 'price', 'operator' => 'greater_than', 'value' => '100'],
+                    ['field' => 'is_personalizable', 'operator' => 'equals', 'value' => '1'],
+                ],
+                'rules_match' => 'all',
+            ],
+        ];
+
         $ids = [];
 
-        foreach ($names as $name) {
-            $ids[$name] = Collection::updateOrCreate(
-                ['slug' => Str::slug($name)],
-                ['name' => $name, 'description' => $name, 'type' => 'manual'],
-            )->id;
+        foreach ($manual as $name => $description) {
+            $ids[$name] = Collection::updateOrCreate(['slug' => Str::slug($name)], [
+                'name' => $name,
+                'description' => $description,
+                'type' => 'manual',
+                'sort_order' => 'best_selling',
+                'channels_count' => 2,
+                'seo_title' => $name,
+                'published_at' => now(),
+            ])->id;
+        }
+
+        foreach ($automatic as $name => $config) {
+            $ids[$name] = Collection::updateOrCreate(['slug' => Str::slug($name)], [
+                'name' => $name,
+                'description' => $config['description'],
+                'type' => 'automatic',
+                'rules' => $config['rules'],
+                'rules_match' => $config['rules_match'],
+                'sort_order' => 'price_asc',
+                'channels_count' => 1,
+                'seo_title' => $name,
+                'published_at' => now(),
+            ])->id;
         }
 
         return $ids;
@@ -141,6 +189,7 @@ class CatalogSeeder extends Seeder
                 'type' => 'polo',
                 'category' => 'Ropa',
                 'collection' => 'Personalizables 3D',
+                'extra_collections' => ['Más vendidos'],
                 'price' => 59.90,
                 'compare_at' => 79.90,
                 'color' => '#3f5b8c',
@@ -175,6 +224,7 @@ class CatalogSeeder extends Seeder
                 'type' => 'hoodie',
                 'category' => 'Ropa',
                 'collection' => 'Personalizables 3D',
+                'extra_collections' => ['Más vendidos'],
                 'price' => 129.90,
                 'compare_at' => 159.90,
                 'color' => '#2f6f5e',
@@ -192,6 +242,7 @@ class CatalogSeeder extends Seeder
                 'type' => 'taza',
                 'category' => 'Hogar',
                 'collection' => 'Más vendidos',
+                'extra_collections' => ['Verano 2026'],
                 'price' => 34.90,
                 'color' => '#a8462f',
                 'tags' => ['sublimación', 'regalo'],
@@ -278,6 +329,7 @@ class CatalogSeeder extends Seeder
                 'type' => 'llavero 3D',
                 'category' => 'Accesorios',
                 'collection' => 'Personalizables 3D',
+                'extra_collections' => ['Más vendidos'],
                 'price' => 19.90,
                 'color' => '#0f766e',
                 'tags' => ['impresión 3D', 'regalo'],

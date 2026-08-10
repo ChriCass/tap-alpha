@@ -29,8 +29,7 @@ export interface Product {
   seo_title: string | null;
   seo_description: string | null;
   published_at: string | null;
-  collection_id: number | null;
-  collection?: Collection | null;
+  collections?: Collection[];
   category_id: number | null;
   category?: Category | null;
   variants: ProductVariant[];
@@ -74,7 +73,7 @@ export interface ProductInput {
   tags?: string[];
   seo_title?: string | null;
   seo_description?: string | null;
-  collection_id?: number | null;
+  collection_ids?: number[];
   category_id?: number | null;
   variants?: ProductVariantInput[];
   images?: ProductImageInput[];
@@ -174,23 +173,111 @@ export interface ProductImage {
   position: number;
 }
 
+export type CollectionType = "manual" | "automatic";
+
+export type CollectionRuleField =
+  | "title"
+  | "product_type"
+  | "vendor"
+  | "price"
+  | "compare_at_price"
+  | "tag"
+  | "inventory_stock"
+  | "variant_sku"
+  | "is_personalizable";
+
+export type CollectionRuleOperator =
+  | "equals"
+  | "not_equals"
+  | "contains"
+  | "not_contains"
+  | "starts_with"
+  | "ends_with"
+  | "greater_than"
+  | "less_than";
+
+export type CollectionSortOrder =
+  | "best_selling"
+  | "manual"
+  | "title_asc"
+  | "title_desc"
+  | "price_asc"
+  | "price_desc"
+  | "created_desc"
+  | "created_asc";
+
+export interface CollectionRule {
+  field: CollectionRuleField;
+  operator: CollectionRuleOperator;
+  value: string;
+}
+
 export interface Collection {
   id: number;
   name: string;
   slug: string;
   description: string | null;
-  type: "manual" | "automatic";
+  image_url: string | null;
+  type: CollectionType;
   rules: CollectionRule[] | null;
+  rules_match: "all" | "any";
+  sort_order: CollectionSortOrder;
+  channels_count: number;
+  theme_template: string;
+  seo_title: string | null;
+  seo_description: string | null;
+  published_at: string | null;
   products_count?: number;
+  /** Solo viene en el detalle: productos ya resueltos y ordenados. */
+  products?: Product[];
   created_at: string;
   updated_at: string;
 }
 
-export interface CollectionRule {
-  condition: string;
-  operator: string;
-  value: string;
+export interface CollectionInput {
+  name?: string;
+  slug?: string | null;
+  description?: string | null;
+  image_url?: string | null;
+  type?: CollectionType;
+  rules?: CollectionRule[];
+  rules_match?: "all" | "any";
+  sort_order?: CollectionSortOrder;
+  channels_count?: number;
+  theme_template?: string | null;
+  seo_title?: string | null;
+  seo_description?: string | null;
+  published_at?: string | null;
+  product_ids?: number[];
 }
+
+export interface CollectionQuery {
+  page?: number;
+  per_page?: number;
+  search?: string;
+  type?: CollectionType | "all";
+  sort?: "created_desc" | "created_asc" | "updated_desc" | "title_asc" | "title_desc";
+}
+
+export interface CollectionTabCounts {
+  all: number;
+  manual: number;
+  automatic: number;
+}
+
+export interface CollectionListResponse extends PaginatedResponse<Collection> {
+  counts: CollectionTabCounts;
+  from: number | null;
+  to: number | null;
+}
+
+export interface CollectionRuleOptions {
+  fields: CollectionRuleField[];
+  operators: CollectionRuleOperator[];
+  sort_orders: CollectionSortOrder[];
+}
+
+export type CollectionBulkAction = "delete" | "publish" | "unpublish";
 
 export interface Category {
   id: number;

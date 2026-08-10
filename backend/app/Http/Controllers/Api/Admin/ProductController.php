@@ -26,7 +26,7 @@ class ProductController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = $this->filteredQuery($request)
-            ->with(['variants', 'images', 'collection', 'category']);
+            ->with(['variants', 'images', 'collections', 'category']);
 
         $this->applySort($query, $request->input('sort', 'created_desc'));
 
@@ -172,7 +172,7 @@ class ProductController extends Controller
 
     public function show(Product $product): JsonResponse
     {
-        $product->load(['variants', 'images', 'collection', 'category']);
+        $product->load(['variants', 'images', 'collections', 'category']);
 
         return response()->json(['data' => $product]);
     }
@@ -183,7 +183,8 @@ class ProductController extends Controller
 
         $variants = $validated['variants'] ?? null;
         $images = $validated['images'] ?? null;
-        unset($validated['variants'], $validated['images']);
+        $collectionIds = $validated['collection_ids'] ?? null;
+        unset($validated['variants'], $validated['images'], $validated['collection_ids']);
 
         $validated['slug'] ??= $this->uniqueSlug($validated['name']);
 
@@ -211,7 +212,11 @@ class ProductController extends Controller
             $this->syncImages($product, $images);
         }
 
-        $product->load(['variants', 'images', 'collection', 'category']);
+        if ($collectionIds !== null) {
+            $product->collections()->sync($collectionIds);
+        }
+
+        $product->load(['variants', 'images', 'collections', 'category']);
 
         return response()->json(['data' => $product], 201);
     }
@@ -222,7 +227,8 @@ class ProductController extends Controller
 
         $variants = $validated['variants'] ?? null;
         $images = $validated['images'] ?? null;
-        unset($validated['variants'], $validated['images']);
+        $collectionIds = $validated['collection_ids'] ?? null;
+        unset($validated['variants'], $validated['images'], $validated['collection_ids']);
 
         if (($validated['status'] ?? $product->status) === 'active' && ! $product->published_at) {
             $validated['published_at'] = now();
@@ -238,7 +244,11 @@ class ProductController extends Controller
             $this->syncImages($product, $images);
         }
 
-        $product->refresh()->load(['variants', 'images', 'collection', 'category']);
+        if ($collectionIds !== null) {
+            $product->collections()->sync($collectionIds);
+        }
+
+        $product->refresh()->load(['variants', 'images', 'collections', 'category']);
 
         return response()->json(['data' => $product]);
     }
@@ -295,10 +305,16 @@ class ProductController extends Controller
             }
         }
 
-        foreach (['category_id' => 'category_id', 'collection_id' => 'collection_id'] as $param => $column) {
-            if ($values = $this->listParam($request, $param)) {
-                $query->whereIn($column, $values);
-            }
+        if ($values = $this->listParam($request, 'category_id')) {
+            $query->whereIn('category_id', $values);
+        }
+
+        // Las colecciones son N a N: se filtra por el pivote.
+        if ($values = $this->listParam($request, 'collection_id')) {
+            $query->whereHas(
+                'collections',
+                fn (Builder $q) => $q->whereIn('collections.id', $values),
+            );
         }
 
         if ($tags = $this->listParam($request, 'tag')) {
@@ -415,7 +431,8 @@ class ProductController extends Controller
             'tags.*' => 'string|max:60',
             'seo_title' => 'nullable|string|max:255',
             'seo_description' => 'nullable|string',
-            'collection_id' => 'nullable|exists:collections,id',
+            'collection_ids' => 'nullable|array',
+            'collection_ids.*' => 'integer|exists:collections,id',
             'category_id' => 'nullable|exists:categories,id',
             'variants' => 'nullable|array',
             'variants.*.id' => 'nullable|integer',

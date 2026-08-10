@@ -135,7 +135,11 @@ php artisan serve           # http://localhost:8000
 | GET | `/api/admin/products/filters` | Sanctum | Valores para filtros (vendors, tipos, categorías, colecciones, tags) |
 | GET | `/api/admin/products/stats` | Sanctum | Métricas: sell-through, días de inventario, análisis ABC |
 | POST | `/api/admin/products/bulk` | Sanctum | Acciones masivas (activate, draft, archive, delete, personalizable_on/off) |
-| GET/POST/PUT/DELETE | `/api/admin/collections` | Sanctum | CRUD colecciones |
+| GET/POST/PUT/DELETE | `/api/admin/collections` | Sanctum | CRUD colecciones (manuales y automáticas) |
+| GET | `/api/admin/collections/rule-options` | Sanctum | Campos, operadores y criterios de orden admitidos |
+| POST | `/api/admin/collections/preview` | Sanctum | Resuelve condiciones sin guardarlas (vista previa en vivo) |
+| POST | `/api/admin/collections/bulk` | Sanctum | Acciones masivas (publish, unpublish, delete) |
+| POST | `/api/admin/collections/{id}/duplicate` | Sanctum | Duplica la colección con sus reglas y productos |
 | GET | `/api/admin/orders` | Sanctum | Listar órdenes |
 | GET | `/api/admin/orders/{id}` | Sanctum | Ver orden |
 | PATCH | `/api/admin/orders/{id}/status` | Sanctum | Cambiar estado |
@@ -165,7 +169,12 @@ Password: password
   `seo_title`, `seo_description` y `published_at`
 - `product_variants` — Variantes (SKU, código de barras, stock, ajuste de precio, posición, atributos JSON)
 - `product_images` — Imágenes por producto
-- `collections` — Colecciones manuales/automáticas
+- `collections` — Manuales o automáticas. Las automáticas guardan sus condiciones en
+  `rules` (JSON con `field`/`operator`/`value`) más `rules_match` (`all`/`any`); el motor
+  que las traduce a consulta vive en `Collection::matchingProductsQuery()`. También tienen
+  `image_url`, `sort_order`, `channels_count`, `theme_template`, SEO y `published_at`
+- `collection_product` — Pivote N a N entre colecciones y productos, con `position`.
+  Un producto puede estar en varias colecciones (no existe `products.collection_id`)
 - `categories` — Categorías jerárquicas
 - `orders` — Órdenes con soft deletes
 - `order_items` — Items de orden (con snapshot de diseño personalizado)
@@ -195,7 +204,9 @@ El proxy de Vite redirige `/api/*` a `http://localhost:8000`.
 | `/admin/products` | Índice estilo Shopify: métricas, tabs, filtros, columnas configurables, acciones masivas | `pages/admin/products.page.tsx` |
 | `/admin/products/new` | Alta de producto (mismo editor) | `pages/admin/product-detail.page.tsx` |
 | `/admin/products/:id` | Editor de producto estilo Polaris (precios, inventario, variantes, SEO, organización) | `pages/admin/product-detail.page.tsx` |
-| `/admin/collections` | Colecciones (grid de cards) | `pages/admin/collections.page.tsx` |
+| `/admin/collections` | Índice estilo Shopify con columna de condiciones | `pages/admin/collections.page.tsx` |
+| `/admin/collections/new` | Alta de colección (mismo editor) | `pages/admin/collection-detail.page.tsx` |
+| `/admin/collections/:id` | Editor: items, condiciones, plantilla, SEO | `pages/admin/collection-detail.page.tsx` |
 | `/admin/orders` | Órdenes con filtro por estado | `pages/admin/orders.page.tsx` |
 | `/admin/customers` | Clientes con búsqueda | `pages/admin/customers.page.tsx` |
 | `/admin/coupons` | Cupones de descuento | `pages/admin/coupons.page.tsx` |
@@ -220,15 +231,17 @@ Clase singleton que maneja todas las llamadas HTTP:
 - Auto-attach del Bearer token
 - Auto-redirect en 401
 
-### Capa visual Polaris (módulo de productos)
+### Capa visual Polaris (productos y colecciones)
 
-El módulo de productos replica el admin de Shopify. Vive en dos carpetas y **no** afecta
-al resto del panel, que conserva el estilo índigo original:
+Los módulos de productos y colecciones replican el admin de Shopify. Viven en carpetas
+propias y **no** afectan al resto del panel, que conserva el estilo índigo original:
 
 - `components/polaris/` — primitivas con la estética de Shopify: `PButton`, `PCard`, `Badge`,
   `Checkbox`, `Popover`, `TextField`, `PSelect`, `Modal`, `Icon`, `useToast`, `PolarisFrame`, `PPage`.
 - `components/products/` — piezas del módulo: `ProductInsights`, `ProductToolbar`,
   `ProductIndexTable`, `ProductImportModal`, `InventoryCell`, `ProductStatusBadge`, `ProductThumbnail`.
+- `components/collections/` — `CollectionIndexTable`, `CollectionToolbar`, `CollectionItemsCard`,
+  `ConditionsEditor`, `ProductPickerModal` y `rules.ts` (etiquetas y operadores válidos por campo).
 
 Los tokens de color y sombra están en `src/index.css` dentro de `@theme` (`bg-shell`,
 `text-ink-sub`, `border-line`, `shadow-(--shadow-card)`, etc.). `PolarisFrame` cancela el

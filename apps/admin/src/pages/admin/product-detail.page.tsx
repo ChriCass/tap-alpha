@@ -55,7 +55,7 @@ interface FormState {
   seo_title: string;
   seo_description: string;
   category_id: string;
-  collection_id: string;
+  collection_ids: number[];
   variants: VariantForm[];
   images: ImageForm[];
 }
@@ -79,7 +79,7 @@ const EMPTY_FORM: FormState = {
   seo_title: "",
   seo_description: "",
   category_id: "",
-  collection_id: "",
+  collection_ids: [],
   variants: [
     {
       key: "new-0",
@@ -489,17 +489,10 @@ export function ProductDetailPage() {
                   ]}
                 />
 
-                <PSelect
-                  label="Colección"
-                  value={form.collection_id}
-                  onChange={(event) => update("collection_id", event.target.value)}
-                  options={[
-                    { value: "", label: "Sin colección" },
-                    ...(options?.collections ?? []).map((collection) => ({
-                      value: String(collection.id),
-                      label: collection.name,
-                    })),
-                  ]}
+                <CollectionsField
+                  selected={form.collection_ids}
+                  options={options?.collections ?? []}
+                  onChange={(ids) => update("collection_ids", ids)}
                 />
 
                 <TagsField tags={form.tags} onChange={(tags) => update("tags", tags)} />
@@ -744,6 +737,61 @@ function VariantsCard({ variants, basePrice, trackInventory, onChange }: Variant
   );
 }
 
+interface CollectionsFieldProps {
+  selected: number[];
+  options: { id: number; name: string }[];
+  onChange: (ids: number[]) => void;
+}
+
+/** Un producto puede estar en varias colecciones: se eligen del select y se listan como chips. */
+function CollectionsField({ selected, options, onChange }: CollectionsFieldProps) {
+  const available = options.filter((option) => !selected.includes(option.id));
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <PSelect
+        label="Colecciones"
+        value=""
+        disabled={available.length === 0}
+        onChange={(event) => {
+          if (event.target.value) onChange([...selected, Number(event.target.value)]);
+        }}
+        options={[
+          {
+            value: "",
+            label: available.length === 0 ? "Ya está en todas" : "Agregar a una colección…",
+          },
+          ...available.map((option) => ({ value: String(option.id), label: option.name })),
+        ]}
+      />
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {selected.map((id) => {
+            const name = options.find((option) => option.id === id)?.name ?? `#${id}`;
+
+            return (
+              <span
+                key={id}
+                className="inline-flex items-center gap-1 rounded-lg bg-surface-active px-2 py-0.5 text-xs text-ink"
+              >
+                {name}
+                <button
+                  type="button"
+                  onClick={() => onChange(selected.filter((item) => item !== id))}
+                  className="text-ink-sub hover:text-ink"
+                  aria-label={`Quitar de ${name}`}
+                >
+                  <Icon name="close" className="size-3" />
+                </button>
+              </span>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TagsField({ tags, onChange }: { tags: string[]; onChange: (tags: string[]) => void }) {
   const [draft, setDraft] = useState("");
 
@@ -819,7 +867,7 @@ function toFormState(product: Product): FormState {
     seo_title: product.seo_title ?? "",
     seo_description: product.seo_description ?? "",
     category_id: product.category_id === null ? "" : String(product.category_id),
-    collection_id: product.collection_id === null ? "" : String(product.collection_id),
+    collection_ids: (product.collections ?? []).map((collection) => collection.id),
     variants: product.variants.map((variant) => ({
       key: `v-${variant.id}`,
       id: variant.id,
@@ -858,7 +906,7 @@ function toPayload(form: FormState): ProductInput {
     seo_title: form.seo_title || null,
     seo_description: form.seo_description || null,
     category_id: form.category_id === "" ? null : Number(form.category_id),
-    collection_id: form.collection_id === "" ? null : Number(form.collection_id),
+    collection_ids: form.collection_ids,
     variants: form.variants.map((variant) => ({
       id: variant.id,
       sku: variant.sku,

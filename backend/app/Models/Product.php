@@ -29,7 +29,6 @@ class Product extends Model
         'seo_title',
         'seo_description',
         'published_at',
-        'collection_id',
         'category_id',
     ];
 
@@ -58,9 +57,11 @@ class Product extends Model
         return $this->hasMany(ProductImage::class)->orderBy('position');
     }
 
-    public function collection()
+    public function collections()
     {
-        return $this->belongsTo(Collection::class);
+        return $this->belongsToMany(Collection::class)
+            ->withPivot('position')
+            ->withTimestamps();
     }
 
     public function category()
