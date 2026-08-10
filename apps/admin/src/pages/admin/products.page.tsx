@@ -219,14 +219,18 @@ export function ProductsPage() {
         actions={
           <>
             <PButton onClick={handleExport} disabled={exporting}>
-              {exporting ? "Exportando…" : "Exportar"}
+              <span className="hidden sm:inline">{exporting ? "Exportando…" : "Exportar"}</span>
+              <Icon name="export" className="size-[18px] sm:hidden" />
             </PButton>
-            <PButton onClick={() => setImportOpen(true)}>Importar</PButton>
+            <PButton onClick={() => setImportOpen(true)}>
+              <span className="hidden sm:inline">Importar</span>
+              <Icon name="import" className="size-[18px] sm:hidden" />
+            </PButton>
             <Popover
               align="right"
               activator={({ onClick }) => (
                 <PButton iconAfter="chevronDown" onClick={onClick}>
-                  Más acciones
+                  <span className="hidden sm:inline">Más </span>acciones
                 </PButton>
               )}
             >
@@ -272,7 +276,8 @@ export function ProductsPage() {
               )}
             </Popover>
             <PButton variant="primary" onClick={() => navigate("/admin/products/new")}>
-              Agregar producto
+              <span className="hidden sm:inline">Agregar producto</span>
+              <Icon name="plus" className="size-[18px] sm:hidden" />
             </PButton>
           </>
         }

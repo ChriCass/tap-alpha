@@ -80,8 +80,8 @@ export function ProductToolbar({
 
   return (
     <div className="border-b border-line">
-      <div className="flex items-center gap-2 px-2 py-1.5">
-        <nav className="flex shrink-0 items-center gap-0.5">
+      <div className="flex flex-wrap items-center gap-2 px-2 py-1.5">
+        <nav className="flex shrink-0 items-center gap-0.5 overflow-x-auto">
           {TABS.map((tab) => {
             const active = (query.status ?? "all") === tab.value;
 
@@ -90,7 +90,7 @@ export function ProductToolbar({
                 key={tab.value}
                 type="button"
                 onClick={() => onChange({ status: tab.value, page: 1 })}
-                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[13px] transition-colors ${
+                className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1 text-[13px] transition-colors ${
                   active ? "bg-surface-active font-medium text-ink" : "text-ink-sub hover:bg-surface-hover"
                 }`}
               >
@@ -101,11 +101,14 @@ export function ProductToolbar({
           })}
         </nav>
 
-        <SearchField value={query.search ?? ""} onChange={(search) => onChange({ search, page: 1 })} />
-
-        <FiltersPopover query={query} options={options} onChange={onChange} />
-        <SortPopover value={query.sort ?? "created_desc"} onChange={(sort) => onChange({ sort })} />
-        <ColumnsPopover columns={columns} onToggleColumn={onToggleColumn} />
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <SearchField value={query.search ?? ""} onChange={(search) => onChange({ search, page: 1 })} />
+          <div className="flex shrink-0 items-center gap-0.5">
+            <FiltersPopover query={query} options={options} onChange={onChange} />
+            <SortPopover value={query.sort ?? "created_desc"} onChange={(sort) => onChange({ sort })} />
+            <ColumnsPopover columns={columns} onToggleColumn={onToggleColumn} />
+          </div>
+        </div>
       </div>
 
       <AppliedFilters query={query} options={options} onChange={onChange} />

@@ -8,7 +8,7 @@ import { Icon, type IconName } from "../icon";
  */
 export function PolarisFrame({ children }: { children: ReactNode }) {
   return (
-    <div className="-m-6 min-h-[calc(100vh-3.5rem)] bg-shell text-[13px] text-ink">
+    <div className="-m-3 sm:-m-6 min-h-[calc(100vh-3.5rem)] bg-shell text-[13px] text-ink">
       {children}
     </div>
   );

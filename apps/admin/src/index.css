@@ -1,7 +1,14 @@
 @import "tailwindcss";
 
-/*
- * Tokens de la superficie tipo Shopify (Polaris) usados por el módulo de productos.
+html {
+  overflow-x: hidden;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+/* * Tokens de la superficie tipo Shopify (Polaris) usados por el módulo de productos.
  * Se exponen como utilidades de Tailwind: bg-surface, text-ink, border-line, etc.
  */
 @theme {

@@ -214,7 +214,7 @@ export function ProductDetailPage() {
       {/* Barra fija que tapa la topbar, como la contextual save bar de Shopify:
           al ser fixed no desplaza el contenido cuando aparece. */}
       {dirty && (
-        <div className="fixed top-0 right-0 left-60 z-40 flex items-center justify-between gap-3 bg-surface-inverse px-4 py-2.5 text-white shadow-(--shadow-savebar)">
+        <div className="fixed top-0 right-0 left-0 lg:left-60 z-40 flex items-center justify-between gap-3 bg-surface-inverse px-4 py-2.5 text-white shadow-(--shadow-savebar)">
           <span className="text-[13px] font-medium">Cambios sin guardar</span>
           <div className="flex items-center gap-2">
             <button
@@ -679,27 +679,23 @@ function VariantsCard({ variants, basePrice, trackInventory, onChange }: Variant
             >
               <TextField
                 label="Nombre"
-                labelHidden
                 value={variant.name}
                 placeholder="M / Negro"
                 onChange={(event) => patch(variant.key, { name: event.target.value })}
               />
               <TextField
                 label="SKU"
-                labelHidden
                 value={variant.sku}
                 placeholder="POLO-M-NEG"
                 onChange={(event) => patch(variant.key, { sku: event.target.value })}
               />
               <TextField
                 label="Código de barras"
-                labelHidden
                 value={variant.barcode ?? ""}
                 onChange={(event) => patch(variant.key, { barcode: event.target.value })}
               />
               <TextField
                 label="Ajuste de precio"
-                labelHidden
                 type="number"
                 step="0.01"
                 value={String(variant.price_adjustment)}
@@ -709,7 +705,6 @@ function VariantsCard({ variants, basePrice, trackInventory, onChange }: Variant
               />
               <TextField
                 label="Stock"
-                labelHidden
                 type="number"
                 min="0"
                 disabled={!trackInventory}
