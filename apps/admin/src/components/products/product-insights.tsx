@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Icon, PCard, Popover, PopoverItem } from "../polaris";
-import { formatCurrency, formatNumber } from "../../utils/format";
+import { formatNumber } from "../../utils/format";
 import type { ProductStats } from "../../types";
 
 const RANGES = [
@@ -29,7 +29,7 @@ export function ProductInsights({ stats, days, onDaysChange, loading }: ProductI
 
   return (
     <PCard padding="none">
-      <div className="grid grid-cols-1 divide-y divide-line md:grid-cols-[auto_1fr_1fr_1fr] md:divide-x md:divide-y-0">
+      <div className="grid grid-cols-1 divide-y divide-line md:grid-cols-[auto_1fr_1fr] md:divide-x md:divide-y-0">
         <div className="flex items-center px-4 py-3">
           <Popover
             width="min-w-[150px]"
@@ -76,10 +76,6 @@ export function ProductInsights({ stats, days, onDaysChange, loading }: ProductI
 
         <Metric label="Productos por días de inventario restante" loading={loading}>
           <DaysOfInventory stats={stats} />
-        </Metric>
-
-        <Metric label="Análisis ABC de productos" loading={loading}>
-          <AbcAnalysis stats={stats} />
         </Metric>
       </div>
     </PCard>
@@ -157,22 +153,3 @@ function DaysOfInventory({ stats }: { stats: ProductStats | null }) {
   );
 }
 
-function AbcAnalysis({ stats }: { stats: ProductStats | null }) {
-  if (!stats) return <p className="text-[13px] text-ink-sub">Sin datos</p>;
-
-  const { grades, total_revenue: totalRevenue } = stats.abc;
-  const dominant = (Object.keys(grades) as ("A" | "B" | "C")[]).reduce((best, grade) =>
-    grades[grade].revenue > grades[best].revenue ? grade : best,
-  );
-
-  return (
-    <div className="flex flex-col gap-1">
-      <p className="w-fit border-b-2 border-link text-[15px] font-medium text-ink">
-        {formatCurrency(totalRevenue)} {dominant}
-      </p>
-      <p className="text-xs text-ink-muted">
-        A: {grades.A.count} · B: {grades.B.count} · C: {grades.C.count}
-      </p>
-    </div>
-  );
-}

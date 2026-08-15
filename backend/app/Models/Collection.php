@@ -11,7 +11,6 @@ class Collection extends Model
     /** Campos sobre los que puede filtrar una colección automática. */
     public const RULE_FIELDS = [
         'title',
-        'product_type',
         'vendor',
         'price',
         'compare_at_price',
@@ -53,7 +52,6 @@ class Collection extends Model
         'rules',
         'rules_match',
         'sort_order',
-        'channels_count',
         'theme_template',
         'seo_title',
         'seo_description',
@@ -62,7 +60,6 @@ class Collection extends Model
 
     protected $casts = [
         'rules' => 'array',
-        'channels_count' => 'integer',
         'published_at' => 'datetime',
     ];
 
@@ -76,6 +73,14 @@ class Collection extends Model
     public function isAutomatic(): bool
     {
         return $this->type === 'automatic';
+    }
+
+    /** Lo que un visitante de la tienda pública puede ver: ya publicada. */
+    public function scopePublished(Builder $query): Builder
+    {
+        return $query->where(function (Builder $q) {
+            $q->whereNull('published_at')->orWhere('published_at', '<=', now());
+        });
     }
 
     /**
@@ -134,7 +139,6 @@ class Collection extends Model
 
         match ($rule['field']) {
             'title' => $this->applyText($query, 'name', $operator, (string) $value),
-            'product_type' => $this->applyText($query, 'product_type', $operator, (string) $value),
             'vendor' => $this->applyText($query, 'vendor', $operator, (string) $value),
             'variant_sku' => $query->whereHas(
                 'variants',

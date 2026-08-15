@@ -22,16 +22,12 @@ class CatalogSeeder extends Seeder
                 'name' => $item['name'],
                 'description' => $item['description'],
                 'vendor' => $item['vendor'],
-                'product_type' => $item['type'],
                 'base_price' => $item['price'],
                 'compare_at_price' => $item['compare_at'] ?? null,
                 'cost_per_item' => round($item['price'] * 0.45, 2),
                 'is_personalizable' => $item['personalizable'] ?? true,
                 'track_inventory' => $item['track'] ?? true,
-                'continue_selling_when_out_of_stock' => false,
                 'status' => $item['status'] ?? 'active',
-                'channels_count' => $item['channels'] ?? 1,
-                'catalogs_count' => $item['catalogs'] ?? 1,
                 'tags' => $item['tags'] ?? [],
                 'seo_title' => $item['name'].' | TAP',
                 'seo_description' => Str::limit($item['description'], 150),
@@ -56,7 +52,6 @@ class CatalogSeeder extends Seeder
             foreach (array_values($item['variants']) as $position => $variant) {
                 $product->variants()->create([
                     'sku' => $variant['sku'],
-                    'barcode' => '77'.str_pad((string) random_int(0, 99999999999), 11, '0', STR_PAD_LEFT),
                     'name' => $variant['name'],
                     'price_adjustment' => $variant['adjustment'] ?? 0,
                     'stock' => $variant['stock'],
@@ -74,18 +69,38 @@ class CatalogSeeder extends Seeder
     }
 
     /**
+     * Árbol de categorías: al no existir product_type, la categoría es la única
+     * taxonomía y por eso baja a nivel de "Polos" o "Tazas".
+     *
      * @return array<string, int>
      */
     private function seedCategories(): array
     {
-        $names = ['Ropa', 'Accesorios', 'Hogar', 'Papelería', 'Tecnología', 'Tarjetas de regalo'];
+        $tree = [
+            'Ropa' => ['Polos', 'Hoodies'],
+            'Accesorios' => ['Gorras', 'Bolsos', 'Llaveros', 'Mochilas'],
+            'Hogar' => ['Tazas', 'Botellas'],
+            'Papelería' => ['Cuadernos', 'Stickers', 'Pósters'],
+            'Tecnología' => ['Mousepads', 'Sets de escritorio'],
+            'Tarjetas de regalo' => [],
+        ];
+
         $ids = [];
 
-        foreach ($names as $name) {
-            $ids[$name] = Category::updateOrCreate(
-                ['slug' => Str::slug($name)],
-                ['name' => $name, 'description' => "Productos de {$name}"],
+        foreach ($tree as $parent => $children) {
+            $parentId = Category::updateOrCreate(
+                ['slug' => Str::slug($parent)],
+                ['name' => $parent, 'description' => "Productos de {$parent}", 'parent_id' => null],
             )->id;
+
+            $ids[$parent] = $parentId;
+
+            foreach ($children as $child) {
+                $ids[$child] = Category::updateOrCreate(
+                    ['slug' => Str::slug($child)],
+                    ['name' => $child, 'description' => "{$parent} · {$child}", 'parent_id' => $parentId],
+                )->id;
+            }
         }
 
         return $ids;
@@ -130,7 +145,6 @@ class CatalogSeeder extends Seeder
                 'description' => $description,
                 'type' => 'manual',
                 'sort_order' => 'best_selling',
-                'channels_count' => 2,
                 'seo_title' => $name,
                 'published_at' => now(),
             ])->id;
@@ -144,7 +158,6 @@ class CatalogSeeder extends Seeder
                 'rules' => $config['rules'],
                 'rules_match' => $config['rules_match'],
                 'sort_order' => 'price_asc',
-                'channels_count' => 1,
                 'seo_title' => $name,
                 'published_at' => now(),
             ])->id;
@@ -186,8 +199,7 @@ class CatalogSeeder extends Seeder
                 'name' => 'Polo Personalizable Clásico',
                 'description' => 'Polo de algodón pima 100% peruano, listo para personalizar con el editor 3D.',
                 'vendor' => 'TAP Studio',
-                'type' => 'polo',
-                'category' => 'Ropa',
+                'category' => 'Polos',
                 'collection' => 'Personalizables 3D',
                 'extra_collections' => ['Más vendidos'],
                 'price' => 59.90,
@@ -205,8 +217,7 @@ class CatalogSeeder extends Seeder
                 'name' => 'Polo Oversize Premium',
                 'description' => 'Corte oversize con caída amplia. Ideal para estampados grandes.',
                 'vendor' => 'Andes Textiles',
-                'type' => 'polo',
-                'category' => 'Ropa',
+                'category' => 'Polos',
                 'collection' => 'Verano 2026',
                 'price' => 79.90,
                 'color' => '#6b4f8a',
@@ -221,8 +232,7 @@ class CatalogSeeder extends Seeder
                 'name' => 'Hoodie Personalizable',
                 'description' => 'Polerón con capucha y bolsillo canguro, felpa perchada 320 g.',
                 'vendor' => 'Andes Textiles',
-                'type' => 'hoodie',
-                'category' => 'Ropa',
+                'category' => 'Hoodies',
                 'collection' => 'Personalizables 3D',
                 'extra_collections' => ['Más vendidos'],
                 'price' => 129.90,
@@ -239,8 +249,7 @@ class CatalogSeeder extends Seeder
                 'name' => 'Taza Mágica 11oz',
                 'description' => 'Taza que revela el diseño con el calor. Impresión por sublimación.',
                 'vendor' => 'Cusco Print Co.',
-                'type' => 'taza',
-                'category' => 'Hogar',
+                'category' => 'Tazas',
                 'collection' => 'Más vendidos',
                 'extra_collections' => ['Verano 2026'],
                 'price' => 34.90,
@@ -254,8 +263,7 @@ class CatalogSeeder extends Seeder
                 'name' => 'Taza Cerámica Blanca',
                 'description' => 'Clásica taza blanca de cerámica apta para lavavajillas.',
                 'vendor' => 'Cusco Print Co.',
-                'type' => 'taza',
-                'category' => 'Hogar',
+                'category' => 'Tazas',
                 'collection' => 'Más vendidos',
                 'price' => 24.90,
                 'color' => '#8d8d8d',
@@ -269,8 +277,7 @@ class CatalogSeeder extends Seeder
                 'name' => 'Gorra Bordada 3D',
                 'description' => 'Gorra snapback con bordado 3D en la parte frontal.',
                 'vendor' => 'Arequipa Craft',
-                'type' => 'gorra',
-                'category' => 'Accesorios',
+                'category' => 'Gorras',
                 'collection' => 'Personalizables 3D',
                 'price' => 49.90,
                 'color' => '#334155',
@@ -283,8 +290,7 @@ class CatalogSeeder extends Seeder
                 'name' => 'Tote Bag Ecológica',
                 'description' => 'Bolsa de algodón crudo reutilizable, asas reforzadas.',
                 'vendor' => 'Andes Textiles',
-                'type' => 'tote bag',
-                'category' => 'Accesorios',
+                'category' => 'Bolsos',
                 'collection' => 'Verano 2026',
                 'price' => 39.90,
                 'color' => '#7a6a4f',
@@ -297,8 +303,7 @@ class CatalogSeeder extends Seeder
                 'name' => 'Mousepad XL Gamer',
                 'description' => 'Superficie de tela con base antideslizante, 80 × 30 cm.',
                 'vendor' => 'TAP Studio',
-                'type' => 'mousepad',
-                'category' => 'Tecnología',
+                'category' => 'Mousepads',
                 'collection' => 'Personalizables 3D',
                 'price' => 45.00,
                 'color' => '#1f2937',
@@ -311,8 +316,7 @@ class CatalogSeeder extends Seeder
                 'name' => 'Sticker Pack Personalizado',
                 'description' => 'Pack de 12 stickers de vinilo con corte a medida. Producción bajo demanda.',
                 'vendor' => 'Cusco Print Co.',
-                'type' => 'sticker',
-                'category' => 'Papelería',
+                'category' => 'Stickers',
                 'collection' => 'Personalizables 3D',
                 'price' => 15.00,
                 'color' => '#c2410c',
@@ -326,8 +330,7 @@ class CatalogSeeder extends Seeder
                 'name' => 'Llavero 3D Personalizado',
                 'description' => 'Llavero impreso en 3D con el nombre o logo del cliente.',
                 'vendor' => 'TAP Studio',
-                'type' => 'llavero 3D',
-                'category' => 'Accesorios',
+                'category' => 'Llaveros',
                 'collection' => 'Personalizables 3D',
                 'extra_collections' => ['Más vendidos'],
                 'price' => 19.90,
@@ -342,8 +345,7 @@ class CatalogSeeder extends Seeder
                 'name' => 'Cuaderno A5 Personalizado',
                 'description' => 'Cuaderno cosido de 120 hojas con tapa dura personalizable.',
                 'vendor' => 'Cusco Print Co.',
-                'type' => 'cuaderno',
-                'category' => 'Papelería',
+                'category' => 'Cuadernos',
                 'collection' => 'Corporativo',
                 'price' => 29.90,
                 'color' => '#4338ca',
@@ -357,8 +359,7 @@ class CatalogSeeder extends Seeder
                 'name' => 'Botella Térmica 500ml',
                 'description' => 'Acero inoxidable de doble pared, mantiene la temperatura 12 horas.',
                 'vendor' => 'Arequipa Craft',
-                'type' => 'botella',
-                'category' => 'Hogar',
+                'category' => 'Botellas',
                 'collection' => 'Corporativo',
                 'price' => 89.90,
                 'compare_at' => 109.90,
@@ -373,8 +374,7 @@ class CatalogSeeder extends Seeder
                 'name' => 'Polo Corporativo Bordado',
                 'description' => 'Polo piqué con bordado del logo de la empresa. Pedido mínimo 20 unidades.',
                 'vendor' => 'Andes Textiles',
-                'type' => 'polo',
-                'category' => 'Ropa',
+                'category' => 'Polos',
                 'collection' => 'Corporativo',
                 'price' => 69.90,
                 'status' => 'draft',
@@ -390,8 +390,7 @@ class CatalogSeeder extends Seeder
                 'name' => 'Hoodie Edición Invierno',
                 'description' => 'Edición limitada con forro polar interior. Lanzamiento en junio.',
                 'vendor' => 'Andes Textiles',
-                'type' => 'hoodie',
-                'category' => 'Ropa',
+                'category' => 'Hoodies',
                 'collection' => 'Verano 2026',
                 'price' => 149.90,
                 'status' => 'draft',
@@ -406,7 +405,6 @@ class CatalogSeeder extends Seeder
                 'name' => 'Gift Card Digital',
                 'description' => 'Tarjeta de regalo enviada por correo electrónico. Sin control de inventario.',
                 'vendor' => 'TAP Studio',
-                'type' => 'giftcard',
                 'category' => 'Tarjetas de regalo',
                 'collection' => 'Más vendidos',
                 'price' => 100.00,
@@ -423,12 +421,10 @@ class CatalogSeeder extends Seeder
                 'name' => 'Poster Personalizado A2',
                 'description' => 'Impresión giclée en papel mate de 250 g. Aún sin publicar en la tienda.',
                 'vendor' => 'Cusco Print Co.',
-                'type' => 'poster',
-                'category' => 'Papelería',
+                'category' => 'Pósters',
                 'collection' => 'Personalizables 3D',
                 'price' => 45.00,
                 'color' => '#9333ea',
-                'channels' => 0,
                 'tags' => ['decoración'],
                 'variants' => [
                     ['sku' => 'POST-A2-MAT', 'name' => 'Default Title', 'stock' => 35],
@@ -438,8 +434,7 @@ class CatalogSeeder extends Seeder
                 'name' => 'Mochila Urbana Personalizable',
                 'description' => 'Descontinuada. Se mantiene archivada para el historial de órdenes.',
                 'vendor' => 'Arequipa Craft',
-                'type' => 'mochila',
-                'category' => 'Accesorios',
+                'category' => 'Mochilas',
                 'collection' => 'Verano 2026',
                 'price' => 179.90,
                 'status' => 'archived',
@@ -453,8 +448,7 @@ class CatalogSeeder extends Seeder
                 'name' => 'Set Escritorio 3D',
                 'description' => 'Organizador, portalápices y soporte de audífonos impresos en 3D.',
                 'vendor' => 'TAP Studio',
-                'type' => 'set',
-                'category' => 'Tecnología',
+                'category' => 'Sets de escritorio',
                 'collection' => 'Personalizables 3D',
                 'price' => 249.90,
                 'compare_at' => 299.90,

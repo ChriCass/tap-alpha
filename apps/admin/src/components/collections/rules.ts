@@ -8,7 +8,6 @@ import type {
 
 export const FIELD_LABELS: Record<CollectionRuleField, string> = {
   title: "Título",
-  product_type: "Tipo de producto",
   vendor: "Proveedor",
   price: "Precio",
   compare_at_price: "Precio de comparación",

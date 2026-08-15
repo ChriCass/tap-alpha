@@ -42,7 +42,6 @@ export function CollectionIndexTable({
             <th className="px-3 py-2.5 text-left font-medium">Título</th>
             <th className="px-3 py-2.5 text-right font-medium whitespace-nowrap">Productos</th>
             <th className="px-3 py-2.5 text-left font-medium">Condiciones</th>
-            <th className="px-3 py-2.5 text-right font-medium whitespace-nowrap">Canales</th>
           </tr>
         </thead>
         <tbody>
@@ -85,7 +84,6 @@ export function CollectionIndexTable({
                     <td className="px-3 py-2">
                       <Conditions collection={collection} />
                     </td>
-                    <td className="px-3 py-2 text-right text-link">{collection.channels_count}</td>
                   </tr>
                 );
               })}
@@ -157,7 +155,7 @@ function SkeletonRow() {
       <td className="py-3 pl-1">
         <div className="size-10 animate-pulse rounded-lg bg-line" />
       </td>
-      {Array.from({ length: 4 }).map((_, index) => (
+      {Array.from({ length: 3 }).map((_, index) => (
         <td key={index} className="px-3 py-3">
           <div className="h-3.5 w-28 animate-pulse rounded bg-line" />
         </td>

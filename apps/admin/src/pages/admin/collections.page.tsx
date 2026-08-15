@@ -106,14 +106,13 @@ export function CollectionsPage() {
 
   const handleExport = () => {
     const rows: (string | number | null)[][] = [
-      ["nombre", "handle", "tipo", "productos", "condiciones", "canales", "publicada"],
+      ["nombre", "handle", "tipo", "productos", "condiciones", "publicada"],
       ...collections.map((collection) => [
         collection.name,
         collection.slug,
         collection.type,
         collection.products_count ?? 0,
         (collection.rules ?? []).map(describeRule).join(" | "),
-        collection.channels_count,
         collection.published_at ? "sí" : "no",
       ]),
     ];

@@ -15,16 +15,12 @@ export interface Product {
   slug: string;
   description: string;
   vendor: string | null;
-  product_type: string | null;
   base_price: number;
   compare_at_price: number | null;
   cost_per_item: number | null;
   is_personalizable: boolean;
   track_inventory: boolean;
-  continue_selling_when_out_of_stock: boolean;
   status: ProductStatus;
-  channels_count: number;
-  catalogs_count: number;
   tags: string[] | null;
   seo_title: string | null;
   seo_description: string | null;
@@ -43,8 +39,7 @@ export interface Product {
 export interface ProductVariant {
   id: number;
   product_id: number;
-  sku: string;
-  barcode: string | null;
+  sku: string | null;
   name: string;
   price_adjustment: number;
   stock: number;
@@ -60,16 +55,12 @@ export interface ProductInput {
   slug?: string | null;
   description?: string | null;
   vendor?: string | null;
-  product_type?: string | null;
   base_price?: number;
   compare_at_price?: number | null;
   cost_per_item?: number | null;
   is_personalizable?: boolean;
   track_inventory?: boolean;
-  continue_selling_when_out_of_stock?: boolean;
   status?: ProductStatus;
-  channels_count?: number;
-  catalogs_count?: number;
   tags?: string[];
   seo_title?: string | null;
   seo_description?: string | null;
@@ -81,8 +72,7 @@ export interface ProductInput {
 
 export interface ProductVariantInput {
   id?: number;
-  sku: string;
-  barcode?: string | null;
+  sku?: string | null;
   name: string;
   price_adjustment: number;
   stock: number;
@@ -116,7 +106,6 @@ export interface ProductQuery {
   status?: ProductStatus | "all";
   sort?: ProductSort;
   vendor?: string[];
-  product_type?: string[];
   category_id?: number[];
   collection_id?: number[];
   tag?: string[];
@@ -139,7 +128,6 @@ export interface ProductListResponse extends PaginatedResponse<Product> {
 
 export interface ProductFilterOptions {
   vendors: string[];
-  product_types: string[];
   categories: { id: number; name: string }[];
   collections: { id: number; name: string }[];
   tags: string[];
@@ -151,10 +139,6 @@ export interface ProductStats {
   units_sold: number;
   units_on_hand: number;
   days_of_inventory: Record<"0-30" | "30-60" | "60-90" | "90+" | "unknown", number>;
-  abc: {
-    total_revenue: number;
-    grades: Record<"A" | "B" | "C", { count: number; revenue: number }>;
-  };
 }
 
 export type ProductBulkAction =
@@ -177,7 +161,6 @@ export type CollectionType = "manual" | "automatic";
 
 export type CollectionRuleField =
   | "title"
-  | "product_type"
   | "vendor"
   | "price"
   | "compare_at_price"
@@ -222,7 +205,6 @@ export interface Collection {
   rules: CollectionRule[] | null;
   rules_match: "all" | "any";
   sort_order: CollectionSortOrder;
-  channels_count: number;
   theme_template: string;
   seo_title: string | null;
   seo_description: string | null;
@@ -243,7 +225,6 @@ export interface CollectionInput {
   rules?: CollectionRule[];
   rules_match?: "all" | "any";
   sort_order?: CollectionSortOrder;
-  channels_count?: number;
   theme_template?: string | null;
   seo_title?: string | null;
   seo_description?: string | null;
@@ -366,6 +347,16 @@ export interface Customer {
   updated_at: string;
 }
 
+export interface StoreSetting {
+  id: number;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Analytics {
   revenue: { date: string; amount: number }[];
   orders_count: number;
@@ -386,4 +377,20 @@ export interface PaginatedResponse<T> {
 export interface ApiError {
   message: string;
   errors?: Record<string, string[]>;
+}
+
+export type SearchCategory = "products" | "collections" | "orders" | "customers" | "coupons";
+
+export interface SearchResultItem {
+  id: number;
+  title: string;
+  subtitle: string | null;
+  image_url?: string | null;
+  status?: ProductStatus;
+}
+
+export interface GlobalSearchResponse {
+  query: string;
+  counts: Record<SearchCategory, number>;
+  results: Record<SearchCategory, SearchResultItem[]>;
 }

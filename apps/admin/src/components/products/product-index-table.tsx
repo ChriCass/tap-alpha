@@ -122,12 +122,6 @@ function Cell({ column, product }: { column: ProductColumnKey; product: Product 
       return <InventoryCell product={product} />;
     case "category":
       return <span className="text-ink">{product.category?.name ?? ""}</span>;
-    case "channels":
-      return <span className="text-link">{product.channels_count}</span>;
-    case "catalogs":
-      return <span className="text-link">{product.catalogs_count}</span>;
-    case "product_type":
-      return <span className="text-ink capitalize">{product.product_type ?? ""}</span>;
     case "vendor":
       return <span className="text-ink">{product.vendor ?? ""}</span>;
     case "price":

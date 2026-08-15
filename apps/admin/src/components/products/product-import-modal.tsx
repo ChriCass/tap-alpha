@@ -26,9 +26,6 @@ const COLUMN_ALIASES: Record<string, string> = {
   status: "status",
   proveedor: "vendor",
   vendor: "vendor",
-  tipo: "type",
-  "tipo de producto": "type",
-  type: "type",
   categoria: "category",
   category: "category",
   sku: "sku",
@@ -113,7 +110,6 @@ export function ProductImportModal({
           base_price: Number(record.price ?? 0) || 0,
           status,
           vendor: record.vendor || null,
-          product_type: record.type || null,
           category_id: categoryId ?? null,
           tags: record.tags ? record.tags.split("|").map((tag) => tag.trim()) : [],
           variants: [
@@ -180,7 +176,7 @@ export function ProductImportModal({
       <div className="flex flex-col gap-3">
         <p className="text-[13px] text-ink-sub">
           Columnas admitidas: <code>nombre</code>, <code>precio</code>, <code>estado</code>,{" "}
-          <code>proveedor</code>, <code>tipo</code>, <code>categoria</code>, <code>sku</code>,{" "}
+          <code>proveedor</code>, <code>categoria</code>, <code>sku</code>,{" "}
           <code>stock</code>, <code>etiquetas</code> (separadas por <code>|</code>) y{" "}
           <code>descripcion</code>.
         </p>

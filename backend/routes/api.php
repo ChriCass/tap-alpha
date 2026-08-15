@@ -8,14 +8,31 @@ use App\Http\Controllers\Api\Admin\OrderController;
 use App\Http\Controllers\Api\Admin\CustomerController;
 use App\Http\Controllers\Api\Admin\CouponController;
 use App\Http\Controllers\Api\Admin\AnalyticsController;
+use App\Http\Controllers\Api\Admin\SearchController;
+use App\Http\Controllers\Api\Admin\StoreSettingController;
+use App\Http\Controllers\Api\Store\ProductController as StoreProductController;
+use App\Http\Controllers\Api\Store\CollectionController as StoreCollectionController;
+use App\Http\Controllers\Api\Store\StoreSettingController as PublicStoreSettingController;
 
 // Public auth routes
 Route::post('/auth/login', [AuthController::class, 'login']);
+
+// Public: catálogo de la tienda (sin login, solo lectura, solo productos/colecciones publicados)
+Route::prefix('store')->group(function () {
+    Route::get('/settings', [PublicStoreSettingController::class, 'show']);
+    Route::get('/products', [StoreProductController::class, 'index']);
+    Route::get('/products/{slug}', [StoreProductController::class, 'show']);
+    Route::get('/collections', [StoreCollectionController::class, 'index']);
+    Route::get('/collections/{slug}', [StoreCollectionController::class, 'show']);
+});
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
+
+    // Admin: Búsqueda global (Ctrl+K)
+    Route::get('/admin/search', [SearchController::class, 'index']);
 
     // Admin: Products (las rutas fijas van antes del apiResource para no chocar con /{product})
     Route::get('/admin/products/filters', [ProductController::class, 'filterOptions']);
@@ -44,4 +61,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Admin: Analytics
     Route::get('/admin/analytics', [AnalyticsController::class, 'index']);
+
+    // Admin: Datos de la tienda (singleton)
+    Route::get('/admin/store-settings', [StoreSettingController::class, 'show']);
+    Route::put('/admin/store-settings', [StoreSettingController::class, 'update']);
 });

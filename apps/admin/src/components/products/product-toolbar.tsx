@@ -204,15 +204,6 @@ function FiltersPopover({
         />
 
         <FilterGroup
-          label="Tipo de producto"
-          values={options?.product_types ?? []}
-          selected={query.product_type ?? []}
-          onToggle={(value) =>
-            onChange({ product_type: toggleList(query.product_type, value), page: 1 })
-          }
-        />
-
-        <FilterGroup
           label="Categoría"
           values={(options?.categories ?? []).map((category) => ({
             value: category.id,
@@ -376,18 +367,6 @@ function AppliedFilters({
     });
   }
 
-  for (const type of query.product_type ?? []) {
-    chips.push({
-      key: `type-${type}`,
-      label: `Tipo: ${type}`,
-      onRemove: () =>
-        onChange({
-          product_type: (query.product_type ?? []).filter((item) => item !== type),
-          page: 1,
-        }),
-    });
-  }
-
   for (const id of query.category_id ?? []) {
     const name = options?.categories.find((category) => category.id === id)?.name ?? id;
     chips.push({
@@ -453,7 +432,6 @@ function AppliedFilters({
         onClick={() =>
           onChange({
             vendor: [],
-            product_type: [],
             category_id: [],
             collection_id: [],
             tag: [],
@@ -536,7 +514,6 @@ function BulkActionsBar({
 function countActiveFilters(query: ProductQuery): number {
   return (
     (query.vendor?.length ?? 0) +
-    (query.product_type?.length ?? 0) +
     (query.category_id?.length ?? 0) +
     (query.collection_id?.length ?? 0) +
     (query.stock ? 1 : 0) +

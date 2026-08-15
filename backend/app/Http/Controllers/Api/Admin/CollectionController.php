@@ -264,7 +264,6 @@ class CollectionController extends Controller
             'rules.*.value' => 'present|nullable|string|max:255',
             'rules_match' => 'in:all,any',
             'sort_order' => ['nullable', Rule::in(Collection::SORT_ORDERS)],
-            'channels_count' => 'integer|min:0',
             'theme_template' => 'nullable|string|max:60',
             'seo_title' => 'nullable|string|max:255',
             'seo_description' => 'nullable|string',

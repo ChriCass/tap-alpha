@@ -7,13 +7,11 @@ use App\Models\Category;
 use App\Models\Collection;
 use App\Models\OrderItem;
 use App\Models\Product;
-use App\Models\ProductVariant;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
 
 class ProductController extends Controller
 {
@@ -50,14 +48,9 @@ class ProductController extends Controller
                     ->distinct()
                     ->orderBy('vendor')
                     ->pluck('vendor'),
-                'product_types' => Product::query()
-                    ->whereNotNull('product_type')
-                    ->distinct()
-                    ->orderBy('product_type')
-                    ->pluck('product_type'),
-                'categories' => Category::query()
-                    ->orderBy('name')
-                    ->get(['id', 'name']),
+                // La categoría es la única taxonomía: se devuelve con la ruta
+                // completa («Ropa › Polos») para que el filtro sea legible.
+                'categories' => $this->categoryOptions(),
                 'collections' => Collection::query()
                     ->orderBy('name')
                     ->get(['id', 'name']),
@@ -73,7 +66,30 @@ class ProductController extends Controller
     }
 
     /**
-     * Métricas de la cabecera: sell-through, días de inventario y análisis ABC.
+     * Categorías con su ruta jerárquica resuelta, ordenadas por esa ruta.
+     *
+     * @return array<int, array{id: int, name: string}>
+     */
+    private function categoryOptions(): array
+    {
+        $categories = Category::query()->get(['id', 'name', 'parent_id'])->keyBy('id');
+
+        return $categories
+            ->map(function (Category $category) use ($categories) {
+                $parent = $category->parent_id ? $categories->get($category->parent_id) : null;
+
+                return [
+                    'id' => $category->id,
+                    'name' => $parent ? "{$parent->name} › {$category->name}" : $category->name,
+                ];
+            })
+            ->sortBy('name')
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Métricas de la cabecera: sell-through y días de inventario restante.
      */
     public function stats(Request $request): JsonResponse
     {
@@ -98,7 +114,6 @@ class ProductController extends Controller
             ->get(['id', 'name', 'track_inventory']);
 
         $unitsSold = (int) $sales->sum('units');
-        $totalRevenue = (float) $sales->sum('revenue');
         $onHand = $products->sum(fn (Product $p) => $p->track_inventory ? $p->total_inventory : 0);
 
         $sellThrough = ($unitsSold + $onHand) > 0
@@ -133,28 +148,6 @@ class ProductController extends Controller
             $buckets[$key]++;
         }
 
-        // ABC: A = 80% de los ingresos, B = siguiente 15%, C = el resto.
-        $ranked = $sales->sortByDesc('revenue')->values();
-        $grades = ['A' => ['count' => 0, 'revenue' => 0.0], 'B' => ['count' => 0, 'revenue' => 0.0], 'C' => ['count' => 0, 'revenue' => 0.0]];
-        $cumulative = 0.0;
-
-        foreach ($ranked as $row) {
-            $revenue = (float) $row->revenue;
-            $share = $totalRevenue > 0 ? $cumulative / $totalRevenue : 1.0;
-            $grade = match (true) {
-                $share < 0.8 => 'A',
-                $share < 0.95 => 'B',
-                default => 'C',
-            };
-
-            $grades[$grade]['count']++;
-            $grades[$grade]['revenue'] += $revenue;
-            $cumulative += $revenue;
-        }
-
-        // Productos sin ventas en el periodo caen en C.
-        $grades['C']['count'] += max(0, $products->count() - $ranked->count());
-
         return response()->json([
             'data' => [
                 'days' => $days,
@@ -162,10 +155,6 @@ class ProductController extends Controller
                 'units_sold' => $unitsSold,
                 'units_on_hand' => $onHand,
                 'days_of_inventory' => $buckets,
-                'abc' => [
-                    'total_revenue' => round($totalRevenue, 2),
-                    'grades' => $grades,
-                ],
             ],
         ]);
     }
@@ -299,10 +288,8 @@ class ProductController extends Controller
             $query->where('status', $request->input('status'));
         }
 
-        foreach (['vendor' => 'vendor', 'product_type' => 'product_type'] as $param => $column) {
-            if ($values = $this->listParam($request, $param)) {
-                $query->whereIn($column, $values);
-            }
+        if ($values = $this->listParam($request, 'vendor')) {
+            $query->whereIn('vendor', $values);
         }
 
         if ($values = $this->listParam($request, 'category_id')) {
@@ -412,21 +399,17 @@ class ProductController extends Controller
         $required = $product ? 'sometimes|required' : 'required';
         $slugRule = 'nullable|string|max:255|unique:products,slug'.($product ? ",{$product->id}" : '');
 
-        $validated = $request->validate([
+        return $request->validate([
             'name' => "{$required}|string|max:255",
             'slug' => $slugRule,
             'description' => 'nullable|string',
             'vendor' => 'nullable|string|max:255',
-            'product_type' => 'nullable|string|max:255',
             'base_price' => "{$required}|numeric|min:0",
             'compare_at_price' => 'nullable|numeric|min:0',
             'cost_per_item' => 'nullable|numeric|min:0',
             'is_personalizable' => 'boolean',
             'track_inventory' => 'boolean',
-            'continue_selling_when_out_of_stock' => 'boolean',
             'status' => 'in:draft,active,archived',
-            'channels_count' => 'integer|min:0',
-            'catalogs_count' => 'integer|min:0',
             'tags' => 'nullable|array',
             'tags.*' => 'string|max:60',
             'seo_title' => 'nullable|string|max:255',
@@ -436,8 +419,7 @@ class ProductController extends Controller
             'category_id' => 'nullable|exists:categories,id',
             'variants' => 'nullable|array',
             'variants.*.id' => 'nullable|integer',
-            'variants.*.sku' => 'required|string|max:255',
-            'variants.*.barcode' => 'nullable|string|max:255',
+            'variants.*.sku' => 'nullable|string|max:255',
             'variants.*.name' => 'required|string|max:255',
             'variants.*.price_adjustment' => 'numeric',
             'variants.*.stock' => 'integer|min:0',
@@ -447,39 +429,6 @@ class ProductController extends Controller
             'images.*.url' => 'required|string',
             'images.*.alt' => 'nullable|string|max:255',
         ]);
-
-        if (isset($validated['variants'])) {
-            $this->assertSkusAreUnique($validated['variants'], $product);
-        }
-
-        return $validated;
-    }
-
-    /**
-     * @param  array<int, array<string, mixed>>  $variants
-     */
-    private function assertSkusAreUnique(array $variants, ?Product $product): void
-    {
-        $skus = array_column($variants, 'sku');
-
-        if (count($skus) !== count(array_unique($skus))) {
-            throw ValidationException::withMessages([
-                'variants' => 'Hay SKUs repetidos entre las variantes.',
-            ]);
-        }
-
-        // whereHas('product') descarta las variantes de productos con borrado
-        // lógico: sus SKU vuelven a estar libres, como en Shopify.
-        $taken = ProductVariant::whereIn('sku', $skus)
-            ->whereHas('product')
-            ->when($product, fn ($q) => $q->where('product_id', '!=', $product->id))
-            ->pluck('sku');
-
-        if ($taken->isNotEmpty()) {
-            throw ValidationException::withMessages([
-                'variants' => 'Estos SKU ya están en uso: '.$taken->implode(', '),
-            ]);
-        }
     }
 
     /**
@@ -493,8 +442,7 @@ class ProductController extends Controller
 
         foreach (array_values($variants) as $position => $variant) {
             $payload = [
-                'sku' => $variant['sku'],
-                'barcode' => $variant['barcode'] ?? null,
+                'sku' => $variant['sku'] ?? null,
                 'name' => $variant['name'],
                 'price_adjustment' => $variant['price_adjustment'] ?? 0,
                 'stock' => $variant['stock'] ?? 0,
@@ -502,16 +450,9 @@ class ProductController extends Controller
                 'attributes' => $variant['attributes'] ?? [],
             ];
 
-            // Se busca por id y, si no viene, por SKU: así un payload sin ids
-            // actualiza la variante existente en vez de chocar con el índice único.
             $existing = empty($variant['id'])
                 ? null
                 : $product->variants()->whereNotIn('id', $keptIds)->find($variant['id']);
-
-            $existing ??= $product->variants()
-                ->whereNotIn('id', $keptIds)
-                ->where('sku', $variant['sku'])
-                ->first();
 
             if ($existing) {
                 $existing->update($payload);

@@ -15,16 +15,12 @@ class Product extends Model
         'slug',
         'description',
         'vendor',
-        'product_type',
         'base_price',
         'compare_at_price',
         'cost_per_item',
         'is_personalizable',
         'track_inventory',
-        'continue_selling_when_out_of_stock',
         'status',
-        'channels_count',
-        'catalogs_count',
         'tags',
         'seo_title',
         'seo_description',
@@ -38,9 +34,6 @@ class Product extends Model
         'cost_per_item' => 'float',
         'is_personalizable' => 'boolean',
         'track_inventory' => 'boolean',
-        'continue_selling_when_out_of_stock' => 'boolean',
-        'channels_count' => 'integer',
-        'catalogs_count' => 'integer',
         'tags' => 'array',
         'published_at' => 'datetime',
     ];
@@ -113,8 +106,16 @@ class Product extends Model
             $q->where('name', 'like', "%{$term}%")
                 ->orWhere('slug', 'like', "%{$term}%")
                 ->orWhere('vendor', 'like', "%{$term}%")
-                ->orWhere('product_type', 'like', "%{$term}%")
                 ->orWhereHas('variants', fn (Builder $v) => $v->where('sku', 'like', "%{$term}%"));
         });
+    }
+
+    /** Lo que un visitante de la tienda pública puede ver: activo y ya publicado. */
+    public function scopePublished(Builder $query): Builder
+    {
+        return $query->where('status', 'active')
+            ->where(function (Builder $q) {
+                $q->whereNull('published_at')->orWhere('published_at', '<=', now());
+            });
     }
 }

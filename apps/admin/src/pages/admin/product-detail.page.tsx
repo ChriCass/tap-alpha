@@ -40,17 +40,12 @@ interface FormState {
   name: string;
   description: string;
   vendor: string;
-  product_type: string;
   base_price: string;
   compare_at_price: string;
   cost_per_item: string;
   status: ProductStatus;
   is_personalizable: boolean;
   track_inventory: boolean;
-  continue_selling_when_out_of_stock: boolean;
-  online_store: boolean;
-  point_of_sale: boolean;
-  wholesale_catalog: boolean;
   tags: string[];
   seo_title: string;
   seo_description: string;
@@ -64,17 +59,12 @@ const EMPTY_FORM: FormState = {
   name: "",
   description: "",
   vendor: "",
-  product_type: "",
   base_price: "0",
   compare_at_price: "",
   cost_per_item: "",
   status: "draft",
   is_personalizable: true,
   track_inventory: true,
-  continue_selling_when_out_of_stock: false,
-  online_store: true,
-  point_of_sale: false,
-  wholesale_catalog: true,
   tags: [],
   seo_title: "",
   seo_description: "",
@@ -84,7 +74,6 @@ const EMPTY_FORM: FormState = {
     {
       key: "new-0",
       sku: "",
-      barcode: "",
       name: "Default Title",
       price_adjustment: 0,
       stock: 0,
@@ -355,14 +344,6 @@ export function ProductDetailPage() {
                   checked={form.track_inventory}
                   onChange={(event) => update("track_inventory", event.target.checked)}
                 />
-                <Checkbox
-                  label="Seguir vendiendo cuando no haya stock"
-                  checked={form.continue_selling_when_out_of_stock}
-                  disabled={!form.track_inventory}
-                  onChange={(event) =>
-                    update("continue_selling_when_out_of_stock", event.target.checked)
-                  }
-                />
                 <p className="text-[13px] text-ink-sub">
                   {form.track_inventory
                     ? `${totalStock} unidades disponibles en ${form.variants.length} ${
@@ -428,42 +409,8 @@ export function ProductDetailPage() {
               />
             </PCard>
 
-            <PCard title="Publicación">
-              <div className="flex flex-col gap-2.5">
-                <p className="text-xs font-medium text-ink-sub">Canales de venta</p>
-                <Checkbox
-                  label="Tienda online"
-                  checked={form.online_store}
-                  onChange={(event) => update("online_store", event.target.checked)}
-                />
-                <Checkbox
-                  label="Punto de venta"
-                  checked={form.point_of_sale}
-                  onChange={(event) => update("point_of_sale", event.target.checked)}
-                />
-                <p className="mt-1 text-xs font-medium text-ink-sub">Catálogos</p>
-                <Checkbox
-                  label="Catálogo mayorista"
-                  checked={form.wholesale_catalog}
-                  onChange={(event) => update("wholesale_catalog", event.target.checked)}
-                />
-              </div>
-            </PCard>
-
             <PCard title="Organización del producto">
               <div className="flex flex-col gap-3">
-                <TextField
-                  label="Tipo de producto"
-                  list="product-types"
-                  value={form.product_type}
-                  onChange={(event) => update("product_type", event.target.value)}
-                />
-                <datalist id="product-types">
-                  {(options?.product_types ?? []).map((type) => (
-                    <option key={type} value={type} />
-                  ))}
-                </datalist>
-
                 <TextField
                   label="Proveedor"
                   list="vendors"
@@ -639,7 +586,6 @@ function VariantsCard({ variants, basePrice, trackInventory, onChange }: Variant
       {
         key: `new-${Date.now()}`,
         sku: "",
-        barcode: "",
         name: "",
         price_adjustment: 0,
         stock: 0,
@@ -663,10 +609,9 @@ function VariantsCard({ variants, basePrice, trackInventory, onChange }: Variant
         </p>
       ) : (
         <div className="flex flex-col gap-2">
-          <div className="hidden grid-cols-[1.4fr_1fr_1fr_0.8fr_0.8fr_auto] gap-2 px-1 text-xs font-medium text-ink-sub sm:grid">
+          <div className="hidden grid-cols-[1.4fr_1fr_0.8fr_0.8fr_auto] gap-2 px-1 text-xs font-medium text-ink-sub sm:grid">
             <span>Nombre</span>
             <span>SKU</span>
-            <span>Código de barras</span>
             <span>Ajuste S/</span>
             <span>Stock</span>
             <span />
@@ -675,7 +620,7 @@ function VariantsCard({ variants, basePrice, trackInventory, onChange }: Variant
           {variants.map((variant) => (
             <div
               key={variant.key}
-              className="grid gap-2 rounded-lg border border-line p-2 sm:grid-cols-[1.4fr_1fr_1fr_0.8fr_0.8fr_auto] sm:items-center sm:border-0 sm:p-0"
+              className="grid gap-2 rounded-lg border border-line p-2 sm:grid-cols-[1.4fr_1fr_0.8fr_0.8fr_auto] sm:items-center sm:border-0 sm:p-0"
             >
               <TextField
                 label="Nombre"
@@ -685,14 +630,9 @@ function VariantsCard({ variants, basePrice, trackInventory, onChange }: Variant
               />
               <TextField
                 label="SKU"
-                value={variant.sku}
+                value={variant.sku ?? ""}
                 placeholder="POLO-M-NEG"
                 onChange={(event) => patch(variant.key, { sku: event.target.value })}
-              />
-              <TextField
-                label="Código de barras"
-                value={variant.barcode ?? ""}
-                onChange={(event) => patch(variant.key, { barcode: event.target.value })}
               />
               <TextField
                 label="Ajuste de precio"
@@ -847,17 +787,12 @@ function toFormState(product: Product): FormState {
     name: product.name,
     description: product.description ?? "",
     vendor: product.vendor ?? "",
-    product_type: product.product_type ?? "",
     base_price: (product.base_price ?? 0).toFixed(2),
     compare_at_price: product.compare_at_price === null ? "" : product.compare_at_price.toFixed(2),
     cost_per_item: product.cost_per_item === null ? "" : product.cost_per_item.toFixed(2),
     status: product.status,
     is_personalizable: product.is_personalizable,
     track_inventory: product.track_inventory,
-    continue_selling_when_out_of_stock: product.continue_selling_when_out_of_stock,
-    online_store: product.channels_count >= 1,
-    point_of_sale: product.channels_count >= 2,
-    wholesale_catalog: product.catalogs_count >= 1,
     tags: product.tags ?? [],
     seo_title: product.seo_title ?? "",
     seo_description: product.seo_description ?? "",
@@ -866,8 +801,7 @@ function toFormState(product: Product): FormState {
     variants: product.variants.map((variant) => ({
       key: `v-${variant.id}`,
       id: variant.id,
-      sku: variant.sku,
-      barcode: variant.barcode ?? "",
+      sku: variant.sku ?? "",
       name: variant.name,
       price_adjustment: variant.price_adjustment,
       stock: variant.stock,
@@ -887,16 +821,12 @@ function toPayload(form: FormState): ProductInput {
     name: form.name.trim(),
     description: form.description || null,
     vendor: form.vendor || null,
-    product_type: form.product_type || null,
     base_price: Number(form.base_price) || 0,
     compare_at_price: form.compare_at_price === "" ? null : Number(form.compare_at_price),
     cost_per_item: form.cost_per_item === "" ? null : Number(form.cost_per_item),
     status: form.status,
     is_personalizable: form.is_personalizable,
     track_inventory: form.track_inventory,
-    continue_selling_when_out_of_stock: form.continue_selling_when_out_of_stock,
-    channels_count: (form.online_store ? 1 : 0) + (form.point_of_sale ? 1 : 0),
-    catalogs_count: form.wholesale_catalog ? 1 : 0,
     tags: form.tags,
     seo_title: form.seo_title || null,
     seo_description: form.seo_description || null,
@@ -904,8 +834,7 @@ function toPayload(form: FormState): ProductInput {
     collection_ids: form.collection_ids,
     variants: form.variants.map((variant) => ({
       id: variant.id,
-      sku: variant.sku,
-      barcode: variant.barcode || null,
+      sku: variant.sku || null,
       name: variant.name,
       price_adjustment: Number(variant.price_adjustment) || 0,
       stock: Number(variant.stock) || 0,

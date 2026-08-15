@@ -9,7 +9,7 @@ Plataforma de comercio electrónico con **personalización de productos en 3D**,
 | Módulo | Descripción | Estado |
 |---|---|---|
 | **Admin Panel** | CRUD productos, variantes, colecciones, órdenes, clientes, cupones, analytics | En desarrollo |
-| **Storefront** | Tienda pública: catálogo, PDP, carrito, checkout | Pendiente |
+| **Storefront** | Tienda pública: catálogo, PDP, carrito, checkout | Catálogo listo (sin carrito/checkout) |
 | **Customizer 3D** | Editor 3D de productos con Three.js, IA generativa | Pendiente |
 | **Store Builder** | Constructor visual drag & drop de tiendas | Pendiente |
 
@@ -64,7 +64,7 @@ TAP-alpha/
 │           ├── components/
 │           │   ├── ui/         # Button, Input, Card (atómicos)
 │           │   ├── forms/      # FormField, SelectField
-│           │   ├── layout/     # Sidebar, Navbar
+│           │   ├── layout/     # Header, Sidebar, GlobalSearch
 │           │   └── common/     # LoadingSpinner, ErrorBoundary
 │           ├── config/         # Configuración (firebase, etc.)
 │           ├── layouts/        # AdminLayout, AuthLayout
@@ -76,6 +76,15 @@ TAP-alpha/
 │           ├── types/          # Interfaces TypeScript
 │           ├── App.tsx         # React Router
 │           └── main.tsx        # Entry point
+│   └── storefront/              # React storefront (tienda pública, catálogo)
+│       └── src/
+│           ├── layouts/        # StorefrontLayout (Header + Footer)
+│           ├── pages/          # HomePage, ProductDetailPage
+│           ├── components/layout/
+│           ├── services/       # api.ts (fetch simple, sin auth)
+│           ├── types/
+│           ├── App.tsx
+│           └── main.tsx
 │
 ├── packages/
 │   └── shared/                 # Tipos compartidos entre apps
@@ -131,9 +140,15 @@ php artisan serve           # http://localhost:8000
 | POST | `/api/auth/login` | No | Login (retorna token) |
 | GET | `/api/auth/me` | Sanctum | Usuario autenticado |
 | POST | `/api/auth/logout` | Sanctum | Cerrar sesión |
+| GET | `/api/store/settings` | No | Nombre/contacto de la tienda para el storefront |
+| GET | `/api/store/products` | No | Catálogo público: solo `Product::published()` (activo + ya publicado) |
+| GET | `/api/store/products/{slug}` | No | Detalle de producto público, con variantes |
+| GET | `/api/store/collections` | No | Colecciones publicadas |
+| GET | `/api/store/collections/{slug}` | No | Colección + sus productos publicados |
+| GET | `/api/admin/search?q=` | Sanctum | Búsqueda global (Ctrl+K): productos, colecciones, órdenes, clientes, cupones |
 | GET/POST/PUT/DELETE | `/api/admin/products` | Sanctum | CRUD productos (sincroniza variantes e imágenes) |
-| GET | `/api/admin/products/filters` | Sanctum | Valores para filtros (vendors, tipos, categorías, colecciones, tags) |
-| GET | `/api/admin/products/stats` | Sanctum | Métricas: sell-through, días de inventario, análisis ABC |
+| GET | `/api/admin/products/filters` | Sanctum | Valores para filtros (proveedores, categorías, colecciones, tags) |
+| GET | `/api/admin/products/stats` | Sanctum | Métricas: sell-through y días de inventario restante |
 | POST | `/api/admin/products/bulk` | Sanctum | Acciones masivas (activate, draft, archive, delete, personalizable_on/off) |
 | GET/POST/PUT/DELETE | `/api/admin/collections` | Sanctum | CRUD colecciones (manuales y automáticas) |
 | GET | `/api/admin/collections/rule-options` | Sanctum | Campos, operadores y criterios de orden admitidos |
@@ -146,6 +161,7 @@ php artisan serve           # http://localhost:8000
 | GET | `/api/admin/customers` | Sanctum | Listar clientes |
 | GET/POST/PUT/DELETE | `/api/admin/coupons` | Sanctum | CRUD cupones |
 | GET | `/api/admin/analytics` | Sanctum | Dashboard analytics |
+| GET/PUT | `/api/admin/store-settings` | Sanctum | Datos de la tienda (singleton, fila única id=1) |
 
 ### Usuario de prueba
 
@@ -164,21 +180,27 @@ Password: password
 
 - `users` — Admin users (Sanctum auth)
 - `products` — Productos con soft deletes. Además de los campos base incluye `vendor`,
-  `product_type`, `category_id`, `compare_at_price`, `cost_per_item`, `track_inventory`,
-  `continue_selling_when_out_of_stock`, `channels_count`, `catalogs_count`, `tags` (JSON),
+  `category_id`, `compare_at_price`, `cost_per_item`, `track_inventory`, `tags` (JSON),
   `seo_title`, `seo_description` y `published_at`
-- `product_variants` — Variantes (SKU, código de barras, stock, ajuste de precio, posición, atributos JSON)
+- `product_variants` — Variantes (SKU opcional y **no único**, stock, ajuste de precio,
+  posición, atributos JSON). El inventario cuelga de la variante, no del producto: el
+  sistema la identifica por `variant_id` (lo que guarda `order_items`), el SKU es solo
+  una etiqueta para humanos
+- `categories` — Jerárquicas vía `parent_id` y **única taxonomía de clasificación**: bajan
+  a nivel de hoja («Ropa › Polos») porque no existe `product_type`
 - `product_images` — Imágenes por producto
 - `collections` — Manuales o automáticas. Las automáticas guardan sus condiciones en
   `rules` (JSON con `field`/`operator`/`value`) más `rules_match` (`all`/`any`); el motor
   que las traduce a consulta vive en `Collection::matchingProductsQuery()`. También tienen
-  `image_url`, `sort_order`, `channels_count`, `theme_template`, SEO y `published_at`
+  `image_url`, `sort_order`, `theme_template`, SEO y `published_at`
 - `collection_product` — Pivote N a N entre colecciones y productos, con `position`.
   Un producto puede estar en varias colecciones (no existe `products.collection_id`)
-- `categories` — Categorías jerárquicas
 - `orders` — Órdenes con soft deletes
 - `order_items` — Items de orden (con snapshot de diseño personalizado)
 - `coupons` — Cupones de descuento
+- `store_settings` — Singleton (una sola fila, id 1) con nombre/email/teléfono/dirección de
+  la tienda. `StoreSetting::current()` la crea si no existe. Alimenta el nombre real que
+  muestra la card "Tienda online" del Dashboard
 - `personal_access_tokens` — Tokens de Sanctum
 
 ---
@@ -200,7 +222,7 @@ El proxy de Vite redirige `/api/*` a `http://localhost:8000`.
 | Ruta | Página | Archivo |
 |---|---|---|
 | `/login` | Login | `pages/auth/login.page.tsx` |
-| `/admin` | Dashboard (KPIs + top products) | `pages/admin/dashboard.page.tsx` |
+| `/admin` | Dashboard (card "Tienda online" + KPIs + top products) | `pages/admin/dashboard.page.tsx` |
 | `/admin/products` | Índice estilo Shopify: métricas, tabs, filtros, columnas configurables, acciones masivas | `pages/admin/products.page.tsx` |
 | `/admin/products/new` | Alta de producto (mismo editor) | `pages/admin/product-detail.page.tsx` |
 | `/admin/products/:id` | Editor de producto estilo Polaris (precios, inventario, variantes, SEO, organización) | `pages/admin/product-detail.page.tsx` |
@@ -234,7 +256,7 @@ Clase singleton que maneja todas las llamadas HTTP:
 ### Capa visual Polaris (productos y colecciones)
 
 Los módulos de productos y colecciones replican el admin de Shopify. Viven en carpetas
-propias y **no** afectan al resto del panel, que conserva el estilo índigo original:
+propias:
 
 - `components/polaris/` — primitivas con la estética de Shopify: `PButton`, `PCard`, `Badge`,
   `Checkbox`, `Popover`, `TextField`, `PSelect`, `Modal`, `Icon`, `useToast`, `PolarisFrame`, `PPage`.
@@ -247,6 +269,26 @@ Los tokens de color y sombra están en `src/index.css` dentro de `@theme` (`bg-s
 `text-ink-sub`, `border-line`, `shadow-(--shadow-card)`, etc.). `PolarisFrame` cancela el
 padding del `AdminLayout` para que el lienzo gris llegue a los bordes.
 
+El chrome global también sigue la estética Shopify actual y usa la paleta `gray-*` de
+Tailwind directamente (no los tokens `@theme` de `components/polaris`, que son solo para el
+lienzo de productos/colecciones):
+
+- `components/layout/header.tsx` — barra superior fija, negra (`bg-[#1a1a1a]`), a todo lo
+  ancho (por encima del sidebar y del contenido). Marca TAP, botón de búsqueda con badge
+  "CTRL K" (abre `GlobalSearch`; el atajo `Ctrl/Cmd+K` también funciona desde cualquier
+  página) y avatar con `Popover` (Configuración, Cerrar sesión).
+- `components/layout/sidebar.tsx` — fijo debajo del header (`top-14`), blanco con borde
+  derecho (`border-gray-200`), iconos de línea de `polaris/icon` (`home`, `bag`, `inventory`,
+  `folder`, `person`, `tag`, `chart`, `settings`) y estado activo con fondo `bg-gray-100`.
+- `components/layout/global-search.tsx` — paleta de comandos (Ctrl+K): pide a
+  `GET /api/admin/search?q=` (debounce 250 ms), agrupa resultados por categoría con conteos,
+  guarda búsquedas recientes en `localStorage` (`tap_recent_searches`) y navega al recurso
+  real (`/admin/products/:id`, `/admin/collections/:id`; órdenes y cupones — sin vista de
+  detalle todavía — abren su índice; clientes abre `/admin/customers?q=`).
+
+El antiguo `navbar.tsx` (barra blanca secundaria) se eliminó: sus funciones (menú móvil,
+identidad del usuario) las absorbió `header.tsx`.
+
 ### Convenciones de componentes
 
 - Cada componente en su carpeta: `components/ui/button/button.tsx`
@@ -257,11 +299,56 @@ padding del `AdminLayout` para que el lienzo gris llegue a los bordes.
 
 ---
 
+## Frontend: Storefront (React)
+
+Tienda pública de solo catálogo (sin cuenta, sin carrito, sin checkout todavía). Es una
+app separada de `apps/admin`, con su propio `package.json`, pero comparte el mismo backend
+Laravel a través de las rutas públicas `/api/store/*` (sin Sanctum).
+
+### Iniciar
+
+```bash
+cd apps/storefront
+npm install
+npm run dev                # http://localhost:5174
+```
+
+El proxy de Vite redirige `/api/*` a `http://localhost:8000`, igual que en `apps/admin`.
+
+### Páginas
+
+| Ruta | Página | Archivo |
+|---|---|---|
+| `/` | Catálogo: hero, buscador, grilla de productos paginada | `pages/home.page.tsx` |
+| `/productos/:slug` | Detalle: imágenes, precio, variantes, descripción | `pages/product-detail.page.tsx` |
+
+`StorefrontLayout` carga el nombre de la tienda una vez (`GET /api/store/settings`) y lo
+pasa a `Header`/`Footer`. Solo se ven productos y colecciones que pasan
+`Product::published()` / `Collection::published()` (backend): status `active` y
+`published_at` ya cumplido — los borradores y archivados del admin nunca llegan aquí.
+
+### Cómo se conecta con el Admin Panel
+
+Ambas apps son clientes independientes del mismo backend, como dos personas que llaman a
+la misma cocina por puertas distintas: el Admin entra por la puerta con llave
+(`/api/admin/*`, requiere Sanctum) y puede escribir; el Storefront entra por la puerta sin
+llave (`/api/store/*`, pública) y solo puede leer lo publicado. La card "Tienda online" del
+Dashboard (`/admin`) enlaza a `VITE_STOREFRONT_URL` (por defecto `http://localhost:5174`)
+para abrir la tienda real en una pestaña nueva.
+
+La cajita de la card no es un mockup: `useStorefrontStatus` (en `dashboard.page.tsx`) le
+hace un `fetch(url, { mode: "no-cors" })` a la storefront al cargar el Dashboard. Si
+responde, se ve un `<iframe>` real de la tienda encogido (`transform: scale(...)`, sin
+interacción); si no responde, la card lo dice ("Sin conexión" / "Tienda no disponible
+ahora") en vez de mostrar un iframe roto — nunca finge un estado que no es el real.
+
+---
+
 ## Próximos pasos
 
 1. ~~Backend Laravel + Admin API~~ Completado
 2. ~~Admin Panel React~~ Completado
-3. Storefront React (catálogo, PDP, carrito, checkout)
+3. Storefront React — catálogo listo; falta carrito y checkout
 4. Customizer 3D (integrar arquitectura de low-osb)
 5. Store Builder (drag & drop)
 6. Integraciones de IA
@@ -274,6 +361,9 @@ cd backend && php artisan serve
 
 # Admin frontend
 cd apps/admin && npm run dev
+
+# Storefront (tienda pública)
+cd apps/storefront && npm run dev
 
 # TypeScript check
 cd apps/admin && npx tsc --noEmit

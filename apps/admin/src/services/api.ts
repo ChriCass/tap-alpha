@@ -9,6 +9,7 @@ import type {
   CollectionRuleOptions,
   Coupon,
   Customer,
+  GlobalSearchResponse,
   Order,
   PaginatedResponse,
   Product,
@@ -18,6 +19,7 @@ import type {
   ProductListResponse,
   ProductQuery,
   ProductStats,
+  StoreSetting,
   User,
 } from "../types";
 
@@ -286,6 +288,20 @@ class ApiClient {
   // Analytics
   getAnalytics() {
     return this.get<{ data: Analytics }>("/admin/analytics");
+  }
+
+  // Búsqueda global (Ctrl+K)
+  globalSearch(query: string) {
+    return this.get<GlobalSearchResponse>(`/admin/search?q=${encodeURIComponent(query)}`);
+  }
+
+  // Datos de la tienda (singleton)
+  getStoreSettings() {
+    return this.get<{ data: StoreSetting }>("/admin/store-settings");
+  }
+
+  updateStoreSettings(data: Pick<StoreSetting, "name" | "email" | "phone" | "address">) {
+    return this.put<{ data: StoreSetting }>("/admin/store-settings", data);
   }
 }
 

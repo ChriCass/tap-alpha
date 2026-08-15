@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Badge,
-  Icon,
   Modal,
   PButton,
   PCard,
@@ -38,8 +37,6 @@ interface FormState {
   rules: CollectionRule[];
   rules_match: "all" | "any";
   sort_order: CollectionSortOrder;
-  online_store: boolean;
-  point_of_sale: boolean;
   theme_template: string;
   seo_title: string;
   seo_description: string;
@@ -55,8 +52,6 @@ const EMPTY_FORM: FormState = {
   rules: [],
   rules_match: "all",
   sort_order: "best_selling",
-  online_store: true,
-  point_of_sale: false,
   theme_template: "default",
   seo_title: "",
   seo_description: "",
@@ -243,8 +238,6 @@ export function CollectionDetailPage() {
     );
   }
 
-  const channels = (form.online_store ? 1 : 0) + (form.point_of_sale ? 1 : 0);
-
   return (
     <PolarisFrame>
       {dirty && (
@@ -358,10 +351,6 @@ export function CollectionDetailPage() {
                     value={form.description}
                     onChange={(event) => update("description", event.target.value)}
                   />
-                  <div className="flex items-center justify-end gap-1.5 text-[13px] text-ink-sub">
-                    <Icon name="store" className="size-4" />
-                    {channels} {channels === 1 ? "canal" : "canales"}
-                  </div>
                 </div>
               </div>
             </PCard>
@@ -441,25 +430,6 @@ export function CollectionDetailPage() {
                     { value: "draft", label: "Sin publicar" },
                   ]}
                 />
-                <p className="text-xs font-medium text-ink-sub">Canales de venta</p>
-                <label className="flex cursor-pointer items-center gap-2 text-[13px]">
-                  <input
-                    type="checkbox"
-                    checked={form.online_store}
-                    onChange={(event) => update("online_store", event.target.checked)}
-                    className="size-[18px] accent-link"
-                  />
-                  Tienda online
-                </label>
-                <label className="flex cursor-pointer items-center gap-2 text-[13px]">
-                  <input
-                    type="checkbox"
-                    checked={form.point_of_sale}
-                    onChange={(event) => update("point_of_sale", event.target.checked)}
-                    className="size-[18px] accent-link"
-                  />
-                  Punto de venta
-                </label>
               </div>
             </PCard>
           </div>
@@ -505,8 +475,6 @@ function toFormState(collection: Collection): FormState {
     rules: collection.rules ?? [],
     rules_match: collection.rules_match ?? "all",
     sort_order: collection.sort_order ?? "best_selling",
-    online_store: collection.channels_count >= 1,
-    point_of_sale: collection.channels_count >= 2,
     theme_template: collection.theme_template || "default",
     seo_title: collection.seo_title ?? "",
     seo_description: collection.seo_description ?? "",
@@ -524,7 +492,6 @@ function toPayload(form: FormState, existing: Collection | null): CollectionInpu
     rules: form.type === "automatic" ? form.rules.filter((rule) => rule.value !== "") : [],
     rules_match: form.rules_match,
     sort_order: form.sort_order,
-    channels_count: (form.online_store ? 1 : 0) + (form.point_of_sale ? 1 : 0),
     theme_template: form.theme_template,
     seo_title: form.seo_title || null,
     seo_description: form.seo_description || null,
