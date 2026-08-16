@@ -1,22 +1,33 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { Card } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { LoadingSpinner } from "../../components/common/loading-spinner";
-import { useToast } from "../../components/polaris";
+import { Icon, useToast } from "../../components/polaris";
 import { api } from "../../services/api";
 import type { Theme } from "../../types";
 
 const STOREFRONT_URL = import.meta.env.VITE_STOREFRONT_URL ?? "http://localhost:5174";
 
 /** Miniatura real del tema: carga el storefront en modo vista previa. */
-function ThemePreview({ themeKey, width, height }: { themeKey: string; width: number; height: number }) {
+function ThemePreview({
+  themeKey,
+  width,
+  height,
+  refreshToken,
+}: {
+  themeKey: string;
+  width: number;
+  height: number;
+  refreshToken?: number;
+}) {
   const virtualWidth = 1200;
   const scale = width / virtualWidth;
 
   return (
     <div style={{ width, height }} className="overflow-hidden bg-gray-50">
       <iframe
-        src={`${STOREFRONT_URL}/?preview_theme=${themeKey}`}
+        src={`${STOREFRONT_URL}/?preview_theme=${themeKey}${refreshToken ? `&_r=${refreshToken}` : ""}`}
         title={`Vista previa del tema ${themeKey}`}
         className="pointer-events-none border-0"
         style={{
@@ -34,6 +45,7 @@ export function ThemesPage() {
   const [themes, setThemes] = useState<Theme[]>([]);
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState<number | null>(null);
+  const [previewToken, setPreviewToken] = useState(0);
   const { showToast, toastMarkup } = useToast();
 
   const fetchThemes = useCallback(async () => {
@@ -46,11 +58,14 @@ export function ThemesPage() {
     fetchThemes();
   }, [fetchThemes]);
 
+  const bumpPreview = () => setPreviewToken((n) => n + 1);
+
   const publish = async (theme: Theme) => {
     setPublishing(theme.id);
     try {
       await api.publishTheme(theme.id);
       await fetchThemes();
+      bumpPreview();
       showToast(`"${theme.name}" es ahora el tema de la tienda`);
     } catch {
       showToast("No se pudo publicar el tema", "critical");
@@ -65,6 +80,7 @@ export function ThemesPage() {
     );
     try {
       await api.updateThemeSettings(theme.id, { accent });
+      bumpPreview();
     } catch {
       showToast("No se pudo guardar el color", "critical");
       fetchThemes();
@@ -86,7 +102,12 @@ export function ThemesPage() {
           <Card className="w-fit">
             <div className="flex flex-col sm:flex-row gap-5">
               <div className="w-fit shrink-0 overflow-hidden rounded-lg border border-gray-200">
-                <ThemePreview themeKey={active.key} width={260} height={168} />
+                <ThemePreview
+                  themeKey={active.key}
+                  width={260}
+                  height={168}
+                  refreshToken={previewToken}
+                />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2 mb-1.5">
@@ -113,7 +134,14 @@ export function ThemesPage() {
                   />
                 </div>
 
-                <div className="mt-4">
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <Link
+                    to={`/admin/themes/${active.id}/editor`}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-700"
+                  >
+                    <Icon name="paint" className="size-3.5" />
+                    Editar secciones
+                  </Link>
                   <a
                     href={STOREFRONT_URL}
                     target="_blank"
@@ -150,6 +178,13 @@ export function ThemesPage() {
                       >
                         {publishing === theme.id ? "Publicando…" : "Publicar"}
                       </Button>
+                      <Link
+                        to={`/admin/themes/${theme.id}/editor`}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-800 transition-colors hover:bg-gray-50"
+                      >
+                        <Icon name="paint" className="size-3.5" />
+                        Editar secciones
+                      </Link>
                       <a
                         href={`${STOREFRONT_URL}/?preview_theme=${theme.key}`}
                         target="_blank"

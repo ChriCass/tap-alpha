@@ -9,7 +9,7 @@ export function MinimalProductDetail({ product }: ThemeProductDetailProps) {
       </Link>
 
       <div className="mt-6 grid grid-cols-1 gap-10 md:grid-cols-2">
-        <div className="aspect-square overflow-hidden rounded-[var(--theme-radius)] bg-gray-100">
+        <div className="aspect-square overflow-hidden rounded-(--theme-radius) bg-gray-100">
           {product.images[0] ? (
             <img
               src={product.images[0].url}
@@ -60,7 +60,7 @@ export function MinimalProductDetail({ product }: ThemeProductDetailProps) {
                 {product.variants.map((variant) => (
                   <div
                     key={variant.id}
-                    className="flex items-center justify-between rounded-[var(--theme-radius)] border border-gray-200 px-3 py-2 text-sm"
+                    className="flex items-center justify-between rounded-(--theme-radius) border border-gray-200 px-3 py-2 text-sm"
                   >
                     <span className="text-gray-700">{variant.name}</span>
                     <span className="flex items-center gap-2">
