@@ -32,10 +32,19 @@ class ThemeController extends Controller
             'settings' => 'required|array',
             'settings.accent' => 'nullable|string|max:30',
             'settings.radius' => 'nullable|string|max:30',
+            'settings.sections' => 'nullable|array',
+            'settings.sections.*.key' => 'required|string|max:40',
+            'settings.sections.*.visible' => 'required|boolean',
         ]);
 
+        // array_filter a secas tira los arrays vacíos; solo queremos botar null/"".
+        $incoming = array_filter(
+            $validated['settings'],
+            fn ($value) => $value !== null && $value !== '',
+        );
+
         $theme->update([
-            'settings' => array_merge($theme->resolvedSettings(), array_filter($validated['settings'])),
+            'settings' => array_merge($theme->resolvedSettings(), $incoming),
         ]);
 
         return response()->json(['data' => $this->present($theme->refresh())]);
