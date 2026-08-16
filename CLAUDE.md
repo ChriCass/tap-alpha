@@ -346,7 +346,8 @@ El proxy de Vite redirige `/api/*` a `http://localhost:8000`.
 | `/admin/customers` | Clientes con búsqueda | `pages/admin/customers.page.tsx` |
 | `/admin/coupons` | Cupones de descuento | `pages/admin/coupons.page.tsx` |
 | `/admin/analytics` | Gráficos y métricas | `pages/admin/analytics.page.tsx` |
-| `/admin/themes` | Temas: activo + borradores, con vista previa en vivo y "Publicar" | `pages/admin/themes.page.tsx` |
+| `/admin/themes` | Temas: activo + borradores, vista previa en vivo, "Publicar" y "Editar secciones" (en todas las tarjetas) | `pages/admin/themes.page.tsx` |
+| `/admin/themes/:id/editor` | Editor en vivo a pantalla completa (tipo customizer de Shopify) de **cualquier** tema, activo o borrador: secciones a la izquierda, tienda en un iframe grande a la derecha | `pages/admin/theme-editor.page.tsx` |
 | `/admin/settings` | Configuración de tienda | `pages/admin/settings.page.tsx` |
 
 ### Auth flow
@@ -467,6 +468,80 @@ carga, paginación ni búsqueda.
 Vista previa sin publicar: `?preview_theme=<key>` en la URL del storefront hace que el
 provider pida ese tema en vez del activo (`GET /api/store/theme?key=`). Es lo que usan las
 miniaturas y el botón "Vista previa" de `/admin/themes`.
+
+### Secciones del Home (arrastrar para reordenar, ojo para ocultar)
+
+Es la versión chica del customizer de Shopify: no hay bloques anidados ni fondos editables,
+solo reordenar y ocultar las piezas que ya existen. El Home de cada tema está partido en 3
+secciones — `hero` (portada), `search` (buscador), `grid` (grilla de productos) — que viven
+como componentes internos separados dentro de `themes/<key>/home.tsx` (`Hero`, `Search`,
+`Grid`). El orden y la visibilidad se guardan en `theme.settings.sections`
+(`[{ key, visible }, ...]`), el mismo JSON donde ya vivían `accent` y `radius`.
+
+```
+themes/<key>/home.tsx: sections.filter(visible).map(key → <Hero|Search|Grid>)
+```
+
+- `Theme::DEFAULT_SECTIONS` (backend) es el orden de fábrica; si un tema no tiene `sections`
+  guardadas, `resolvedSettings()` las completa — por eso los temas sembrados antes de esta
+  función igual funcionan.
+- El editor vive en su propia ruta a pantalla completa, `/admin/themes/:id/editor`
+  (`theme-editor.page.tsx`), fuera del `AdminLayout` (sin header ni sidebar del admin, como
+  el customizer real de Shopify) para que la vista previa tenga el máximo espacio posible.
+  **Se puede editar cualquier tema, publicado o no**: el `:id` de la URL decide cuál, todas
+  las tarjetas de `/admin/themes` tienen su botón "Editar secciones", y `PUT
+  /admin/themes/{id}` nunca exigió que el tema fuera el activo. Editar un borrador no toca
+  la tienda pública — se guarda en su propia fila y recién se ve al publicarlo.
+  - La cabecera muestra un badge `Activo` (verde) o `Borrador` (gris) para que no haya duda
+    de qué se está tocando, y el botón de la derecha cambia según el caso: "Ver tienda"
+    (abre la tienda real) en el activo, "Abrir vista previa" (`?preview_theme=<key>`) en un
+    borrador, porque la tienda real todavía muestra otra piel.
+  - Los borradores sembrados antes de que existieran las secciones igual funcionan: el
+    backend los completa con `Theme::DEFAULT_SECTIONS` en `resolvedSettings()`.
+- Layout de dos paneles: a la izquierda, `SectionsEditor` — cada fila es un `<div draggable>`
+  con **drag-and-drop nativo del navegador** (`onDragStart/onDragOver/onDrop`, sin librería)
+  y un botón de ojo (`Icon` `view`/`hide`) que alterna `visible`. A la derecha, un `<iframe>`
+  a tamaño real (no miniatura escalada) que carga la tienda pública de verdad
+  (`?preview_theme=<key>`), así el resultado que se ve es exactamente el que verá un cliente.
+- **Borrador explícito, no autoguardado**: arrastrar u ocultar solo cambia `draftSections`
+  (estado local); nada se manda al backend hasta que el usuario aprieta "Guardar". La
+  esquina superior derecha del header siempre muestra dos botones, **Cancelar** y
+  **Guardar** — deshabilitados cuando no hay cambios pendientes, activos apenas el borrador
+  difiere de lo ya guardado (`isDirty`, comparación por contenido contra
+  `theme.settings.sections`). Un punto ámbar junto al nombre del tema y el subtítulo
+  ("Cambios sin guardar") refuerzan el mismo estado.
+  - **Cancelar** descarta el borrador y vuelve a las secciones tal como estaban guardadas.
+  - **Guardar** llama a `PUT /admin/themes/{id}` con el borrador, actualiza el estado
+    "guardado" con la respuesta del backend y recién ahí recarga el iframe desde cero
+    (`refreshToken` en el `src` lo obliga a recargar) para que quede sincronizado con lo
+    que ya persistió el servidor.
+  - Si hay cambios sin guardar, el botón de volver (flecha, esquina superior izquierda)
+    pide confirmación antes de salir, y un listener de `beforeunload` avisa igual si se
+    cierra o recarga la pestaña — para que arrastrar/ocultar por error no sea irreversible.
+- **El borrador SÍ se ve al instante**, aunque todavía no esté guardado, vía un puente de
+  `window.postMessage` entre el editor y el iframe. Dos mensajes, con las constantes
+  duplicadas a propósito en ambos lados (`theme-editor.page.tsx` y
+  `apps/storefront/src/hooks/use-theme.tsx`) porque las apps no comparten bundle:
+  - `tap-theme-preview-ready` — lo manda **el storefront al montar**, para avisar que su
+    listener ya existe. **Es un saludo, no un detalle**: sin él, el editor mandaba el primer
+    borrador antes de que el iframe tuviera listener y el mensaje se perdía en silencio
+    (además de un warning de origen, porque el iframe todavía estaba en `about:blank`).
+  - `tap-theme-preview-sections` — lo manda el editor con el arreglo `sections`, solo
+    después de recibir el saludo (`previewReady`) y en cada cambio del borrador. Tras
+    **Guardar** el iframe se recarga, así que `previewReady` vuelve a `false` y se espera el
+    saludo nuevo.
+  Del lado del storefront, `ThemeProvider` solo abre el puente si la URL trae
+  `?preview_theme=` **y** está dentro de un iframe, y acepta el mensaje por
+  `event.source === window.parent` (quien lo embebió) en vez de comparar contra un puerto
+  fijo — comparar contra `localhost:5173` rompía todo si el admin arrancaba en otro puerto.
+  Lo recibido vive en un estado aparte (`previewSections`) que pisa a `settings.sections`
+  solo en memoria; **Guardar** sigue siendo lo único que persiste.
+- El borrador del editor es `ThemeSection[] | null`, donde `null` significa "sin tocar, vale
+  lo guardado" (`sections = draftSections ?? theme.settings.sections`). No es un detalle de
+  estilo: cuando `fetchActive()` seteaba el borrador directamente, el segundo llamado que
+  hace React en desarrollo (StrictMode monta dos veces) **borraba lo que el usuario acababa
+  de editar** si tocaba algo apenas cargaba la página. Con `null`, ninguna respuesta tardía
+  puede pisar una edición en curso. `Cancelar` y `Guardar` simplemente vuelven a `null`.
 
 ### Cómo se conecta con el Admin Panel
 
