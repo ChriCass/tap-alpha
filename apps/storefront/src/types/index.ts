@@ -4,6 +4,17 @@ export interface StoreInfo {
   phone: string | null;
 }
 
+export interface ThemeSettings {
+  accent: string;
+  radius: string;
+}
+
+export interface StoreTheme {
+  key: string;
+  name: string;
+  settings: ThemeSettings;
+}
+
 export interface ProductCategory {
   id: number;
   name: string;

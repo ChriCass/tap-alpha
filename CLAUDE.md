@@ -78,9 +78,10 @@ TAP-alpha/
 │           └── main.tsx        # Entry point
 │   └── storefront/              # React storefront (tienda pública, catálogo)
 │       └── src/
-│           ├── layouts/        # StorefrontLayout (Header + Footer)
-│           ├── pages/          # HomePage, ProductDetailPage
-│           ├── components/layout/
+│           ├── themes/         # Pieles intercambiables: minimal/, bold/, index.ts, types.ts
+│           ├── layouts/        # StorefrontLayout (delega en el Layout del tema)
+│           ├── pages/          # HomePage, ProductDetailPage (traen datos, no maquetan)
+│           ├── hooks/          # use-theme (provider del tema activo)
 │           ├── services/       # api.ts (fetch simple, sin auth)
 │           ├── types/
 │           ├── App.tsx
@@ -124,6 +125,110 @@ src/
 
 ---
 
+## Sistema de diseño: el look Shopify (portable a otro proyecto)
+
+Esta sección trae los valores reales, no solo los nombres — se puede copiar tal cual a otro
+proyecto como punto de partida. Es un **Shopify comprimido**: la idea nunca fue clonar Polaris
+entero, sino tomar los tokens y los pocos componentes que se usan de verdad (botón, card,
+badge, popover, campo de texto, modal, checkbox, tabla, iconos de línea) y nada más.
+
+Para replicarlo de cero en otro proyecto: copiar el bloque `@theme` de abajo a un `index.css`
+con Tailwind v4, copiar `components/polaris/` completo, y seguir las reglas de esta sección
+para cualquier componente nuevo.
+
+### Tokens de color (`@theme` en `index.css`)
+
+```css
+@theme {
+  /* Superficies */
+  --color-shell: #f1f1f1;          /* fondo gris del lienzo, detrás de las cards */
+  --color-surface: #ffffff;        /* fondo de cards, inputs, popovers */
+  --color-surface-sub: #fafafa;
+  --color-surface-hover: #f7f7f7;
+  --color-surface-active: #f0f0f0;
+  --color-surface-inverse: #303030; /* botón primario, toasts */
+
+  /* Bordes */
+  --color-line: #e3e3e3;
+  --color-line-strong: #d5d5d5;
+
+  /* Texto */
+  --color-ink: #303030;            /* texto principal */
+  --color-ink-sub: #616161;        /* texto secundario */
+  --color-ink-muted: #8a8a8a;      /* placeholders, deshabilitado */
+  --color-ink-disabled: #b5b5b5;
+  --color-ink-inverse: #ffffff;
+
+  --color-link: #005bd3;           /* acento: focus rings, enlaces, checkbox marcado */
+
+  /* Pares fondo/texto para estados (Badge, alerts) */
+  --color-success-bg: #cdfee1; --color-success-ink: #0c5132;
+  --color-info-bg: #e0f0ff;    --color-info-ink: #00527c;
+  --color-warning-bg: #ffd6a4; --color-warning-ink: #5e4200;
+  --color-critical-bg: #ffe9e8; --color-critical-ink: #8e0b21;
+
+  /* Sombras: capas finas, no blur genérico */
+  --shadow-card: 0 0 0 1px rgba(0,0,0,.04), 0 1px 0 rgba(0,0,0,.05);
+  --shadow-button: 0 -1px 0 0 #b5b5b5 inset, 0 0 0 1px rgba(0,0,0,.1) inset, 0 1px 0 0 rgba(255,255,255,.2) inset;
+  --shadow-button-primary: 0 -1px 0 0 #000 inset, 0 1px 0 0 rgba(255,255,255,.2) inset;
+  --shadow-popover: 0 4px 12px rgba(0,0,0,.12), 0 0 0 1px rgba(0,0,0,.05);
+  --shadow-savebar: 0 4px 12px rgba(0,0,0,.2);
+}
+```
+
+Estos tokens quedan disponibles como utilidades de Tailwind (`bg-surface`, `text-ink-sub`,
+`border-line`, `shadow-(--shadow-card)`) — son **solo para el lienzo Polaris** (productos,
+colecciones, temas). El chrome global (header, sidebar) usa la paleta `gray-*` de Tailwind
+directamente, sin pasar por estos tokens; ver más abajo por qué.
+
+### Tipografía y espaciado
+
+- **Texto base: 13px** (`text-[13px]`) en casi todo — labels, botones, filas de tabla, campos.
+  No es el `text-sm` (14px) de Tailwind por defecto; Shopify usa un pelo más chico.
+- Títulos de página: `text-[20px] font-bold`. Títulos de card/modal: `text-[13px]`–`text-[15px] font-semibold`.
+- Radio de esquina de dos tamaños, no más: `rounded-lg` (8px) para controles — botones, inputs,
+  filas de menú; `rounded-xl` (12px) para superficies grandes — cards, popovers, modales.
+- Anillo de foco: `ring-2 ring-link` (o `ring-link/25` en campos de texto) — el foco usa el
+  color de acento, no el azul genérico del navegador.
+
+### Iconos de línea (`components/polaris/icon/icon.tsx`)
+
+No es una librería (no lucide-react, no heroicons) — son SVG dibujados a mano, todos con la
+misma receta para que se vean como un solo set:
+
+```tsx
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+     strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" />
+```
+
+Tamaño por defecto `size-4.5` (18px). Para agregar un icono nuevo: dibujar el `<path>` con esa
+misma receta y agregarlo al diccionario `paths`. Inventario actual (39): `search, filter, sort,
+chevronDown/Up/Left/Right, arrowLeft, plus, minus, import, export, columns, grid, list, tag,
+image, close, check, more, grip, calendar, trash, archive, duplicate, external, info, alert,
+store, inventory, chart, view, home, bag, folder, person, history, paint, settings`.
+
+### Componentes clave y sus reglas
+
+| Componente | Regla |
+|---|---|
+| `PButton` | 5 variantes: `primary` (fondo `surface-inverse`, para la acción principal), `secondary` (fondo blanco + `shadow-button`, es el default), `tertiary` (transparente), `plain` (como link), `critical` (rojo, para borrar). 3 tamaños: `slim/medium/large`. |
+| `PCard` | `rounded-xl bg-surface shadow-(--shadow-card)`. Sin borde — la sombra de 1px hace de borde. Padding `none/tight/normal`. |
+| `Badge` | Par fondo+texto por tono (`success/info/warning/critical/neutral`), nunca solo texto de color. |
+| `Popover` / `Modal` | Mismo lenguaje: `rounded-xl bg-surface`, `shadow-popover` o `shadow-savebar`, cierran con click-afuera y `Escape`. |
+| `TextField` | Borde `#8a8a8a` (no un token — así de gris exacto lo usa Shopify), foco `border-link` + `ring-link/25`. |
+| `Checkbox` | Cuadrado de 18px, `rounded-[5px]`, marcado = `bg-link`. El estado indeterminado usa clases mutuamente excluyentes (`indeterminate ? "border-link bg-link" : "border-line-strong bg-surface"`) — mezclarlas con `||` pisa el color por orden de CSS generado. |
+
+### El chrome global no es "Polaris", es Shopify actual
+
+El header negro y el sidebar blanco (`components/layout/header.tsx`, `sidebar.tsx`) replican
+el admin **actual** de Shopify (2025+), que es visualmente otra cosa que Polaris clásico —
+por eso usan `gray-*` de Tailwind puro en vez de los tokens de arriba. Si se replica esto en
+otro proyecto, son dos decisiones de diseño separadas: el lienzo interior (Polaris, tokens de
+esta sección) y el chrome exterior (Shopify actual, `gray-*` + negro `#1a1a1a`) — se puede
+adoptar una sin la otra.
+
+---
+
 ## Backend: Laravel API
 
 ### Iniciar el servidor
@@ -141,6 +246,7 @@ php artisan serve           # http://localhost:8000
 | GET | `/api/auth/me` | Sanctum | Usuario autenticado |
 | POST | `/api/auth/logout` | Sanctum | Cerrar sesión |
 | GET | `/api/store/settings` | No | Nombre/contacto de la tienda para el storefront |
+| GET | `/api/store/theme` | No | Tema publicado (key + settings). Con `?key=` previsualiza otro sin publicarlo |
 | GET | `/api/store/products` | No | Catálogo público: solo `Product::published()` (activo + ya publicado) |
 | GET | `/api/store/products/{slug}` | No | Detalle de producto público, con variantes |
 | GET | `/api/store/collections` | No | Colecciones publicadas |
@@ -162,6 +268,9 @@ php artisan serve           # http://localhost:8000
 | GET/POST/PUT/DELETE | `/api/admin/coupons` | Sanctum | CRUD cupones |
 | GET | `/api/admin/analytics` | Sanctum | Dashboard analytics |
 | GET/PUT | `/api/admin/store-settings` | Sanctum | Datos de la tienda (singleton, fila única id=1) |
+| GET | `/api/admin/themes` | Sanctum | Lista de temas del storefront |
+| POST | `/api/admin/themes/{id}/publish` | Sanctum | Deja ese tema como el único activo |
+| PUT | `/api/admin/themes/{id}` | Sanctum | Ajustes del tema (color de acento, redondeo) |
 
 ### Usuario de prueba
 
@@ -201,6 +310,10 @@ Password: password
 - `store_settings` — Singleton (una sola fila, id 1) con nombre/email/teléfono/dirección de
   la tienda. `StoreSetting::current()` la crea si no existe. Alimenta el nombre real que
   muestra la card "Tienda online" del Dashboard
+- `themes` — Pieles del storefront. `key` apunta a una carpeta de componentes en
+  `apps/storefront/src/themes/<key>`; `settings` (JSON) guarda los ajustes que se aplican
+  como variables CSS; `is_active` marca el único publicado (`Theme::publish()` apaga el resto
+  dentro de una transacción)
 - `personal_access_tokens` — Tokens de Sanctum
 
 ---
@@ -233,6 +346,7 @@ El proxy de Vite redirige `/api/*` a `http://localhost:8000`.
 | `/admin/customers` | Clientes con búsqueda | `pages/admin/customers.page.tsx` |
 | `/admin/coupons` | Cupones de descuento | `pages/admin/coupons.page.tsx` |
 | `/admin/analytics` | Gráficos y métricas | `pages/admin/analytics.page.tsx` |
+| `/admin/themes` | Temas: activo + borradores, con vista previa en vivo y "Publicar" | `pages/admin/themes.page.tsx` |
 | `/admin/settings` | Configuración de tienda | `pages/admin/settings.page.tsx` |
 
 ### Auth flow
@@ -265,9 +379,9 @@ propias:
 - `components/collections/` — `CollectionIndexTable`, `CollectionToolbar`, `CollectionItemsCard`,
   `ConditionsEditor`, `ProductPickerModal` y `rules.ts` (etiquetas y operadores válidos por campo).
 
-Los tokens de color y sombra están en `src/index.css` dentro de `@theme` (`bg-shell`,
-`text-ink-sub`, `border-line`, `shadow-(--shadow-card)`, etc.). `PolarisFrame` cancela el
-padding del `AdminLayout` para que el lienzo gris llegue a los bordes.
+Los tokens de color, sombra, tipografía e iconos con sus valores reales están en
+**"Sistema de diseño: el look Shopify"** más arriba. `PolarisFrame` cancela el padding del
+`AdminLayout` para que el lienzo gris llegue a los bordes.
 
 El chrome global también sigue la estética Shopify actual y usa la paleta `gray-*` de
 Tailwind directamente (no los tokens `@theme` de `components/polaris`, que son solo para el
@@ -323,9 +437,36 @@ El proxy de Vite redirige `/api/*` a `http://localhost:8000`, igual que en `apps
 | `/productos/:slug` | Detalle: imágenes, precio, variantes, descripción | `pages/product-detail.page.tsx` |
 
 `StorefrontLayout` carga el nombre de la tienda una vez (`GET /api/store/settings`) y lo
-pasa a `Header`/`Footer`. Solo se ven productos y colecciones que pasan
+pasa al layout del tema. Solo se ven productos y colecciones que pasan
 `Product::published()` / `Collection::published()` (backend): status `active` y
 `published_at` ya cumplido — los borradores y archivados del admin nunca llegan aquí.
+
+### Temas (pieles intercambiables)
+
+El storefront es **una sola app con varias pieles**, no una app por tienda. Qué piel se usa
+lo decide la base de datos, así que se cambia desde el admin sin tocar código ni redeploy.
+
+```
+tabla themes (is_active)  →  GET /api/store/theme  →  ThemeProvider  →  themes/<key>/
+```
+
+- `hooks/use-theme.tsx` — pide el tema al arrancar, lo guarda en contexto y vuelca
+  `settings` a variables CSS (`--theme-accent`, `--theme-radius`). No renderiza nada hasta
+  tener respuesta, para no mostrar un instante el tema equivocado. Si el backend falla, cae
+  a `minimal` en vez de quedarse en blanco.
+- `themes/types.ts` — el contrato: cada tema expone `Layout`, `Home` y `ProductDetail`.
+- `themes/index.ts` — el registro `key → componentes`. **Agregar un tema = crear su carpeta
+  y registrarlo aquí**; una `key` desconocida cae a `minimal`.
+- `themes/minimal/` y `themes/bold/` — las dos pieles actuales (clara y sobria / oscura y
+  tipografía grande).
+
+Las **páginas traen los datos y los temas solo deciden cómo se ven**: `home.page.tsx` hace
+el fetch y se lo pasa al `Home` del tema activo. Por eso un tema nuevo no repite lógica de
+carga, paginación ni búsqueda.
+
+Vista previa sin publicar: `?preview_theme=<key>` en la URL del storefront hace que el
+provider pida ese tema en vez del activo (`GET /api/store/theme?key=`). Es lo que usan las
+miniaturas y el botón "Vista previa" de `/admin/themes`.
 
 ### Cómo se conecta con el Admin Panel
 

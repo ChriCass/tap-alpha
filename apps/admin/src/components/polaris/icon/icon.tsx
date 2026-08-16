@@ -140,6 +140,12 @@ const paths: Record<string, ReactNode> = {
       <path d="M5 20a7 7 0 0 1 14 0" />
     </>
   ),
+  paint: (
+    <>
+      <path d="M4 8V5.5a1.5 1.5 0 0 1 1.5-1.5h12A1.5 1.5 0 0 1 19 5.5V10a1.5 1.5 0 0 1-1.5 1.5H8" />
+      <path d="M8 11.5V14a1 1 0 0 1-1 1H6a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1" />
+    </>
+  ),
   history: (
     <>
       <circle cx="12" cy="12" r="9" />

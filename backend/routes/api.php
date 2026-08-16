@@ -10,9 +10,11 @@ use App\Http\Controllers\Api\Admin\CouponController;
 use App\Http\Controllers\Api\Admin\AnalyticsController;
 use App\Http\Controllers\Api\Admin\SearchController;
 use App\Http\Controllers\Api\Admin\StoreSettingController;
+use App\Http\Controllers\Api\Admin\ThemeController;
 use App\Http\Controllers\Api\Store\ProductController as StoreProductController;
 use App\Http\Controllers\Api\Store\CollectionController as StoreCollectionController;
 use App\Http\Controllers\Api\Store\StoreSettingController as PublicStoreSettingController;
+use App\Http\Controllers\Api\Store\ThemeController as PublicThemeController;
 
 // Public auth routes
 Route::post('/auth/login', [AuthController::class, 'login']);
@@ -20,6 +22,7 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 // Public: catálogo de la tienda (sin login, solo lectura, solo productos/colecciones publicados)
 Route::prefix('store')->group(function () {
     Route::get('/settings', [PublicStoreSettingController::class, 'show']);
+    Route::get('/theme', [PublicThemeController::class, 'show']);
     Route::get('/products', [StoreProductController::class, 'index']);
     Route::get('/products/{slug}', [StoreProductController::class, 'show']);
     Route::get('/collections', [StoreCollectionController::class, 'index']);
@@ -65,4 +68,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Admin: Datos de la tienda (singleton)
     Route::get('/admin/store-settings', [StoreSettingController::class, 'show']);
     Route::put('/admin/store-settings', [StoreSettingController::class, 'update']);
+
+    // Admin: Temas del storefront
+    Route::get('/admin/themes', [ThemeController::class, 'index']);
+    Route::post('/admin/themes/{theme}/publish', [ThemeController::class, 'publish']);
+    Route::put('/admin/themes/{theme}', [ThemeController::class, 'update']);
 });

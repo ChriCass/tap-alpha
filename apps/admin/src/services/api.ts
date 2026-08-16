@@ -20,6 +20,8 @@ import type {
   ProductQuery,
   ProductStats,
   StoreSetting,
+  Theme,
+  ThemeSettings,
   User,
 } from "../types";
 
@@ -302,6 +304,19 @@ class ApiClient {
 
   updateStoreSettings(data: Pick<StoreSetting, "name" | "email" | "phone" | "address">) {
     return this.put<{ data: StoreSetting }>("/admin/store-settings", data);
+  }
+
+  // Temas del storefront
+  getThemes() {
+    return this.get<{ data: Theme[] }>("/admin/themes");
+  }
+
+  publishTheme(id: number) {
+    return this.post<{ data: Theme }>(`/admin/themes/${id}/publish`);
+  }
+
+  updateThemeSettings(id: number, settings: Partial<ThemeSettings>) {
+    return this.put<{ data: Theme }>(`/admin/themes/${id}`, { settings });
   }
 }
 

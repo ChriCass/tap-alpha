@@ -9,6 +9,7 @@ const navItems: { to: string; label: string; icon: IconName }[] = [
   { to: "/admin/customers", label: "Clientes", icon: "person" },
   { to: "/admin/coupons", label: "Cupones", icon: "tag" },
   { to: "/admin/analytics", label: "Analytics", icon: "chart" },
+  { to: "/admin/themes", label: "Temas", icon: "paint" },
 ];
 
 interface SidebarProps {

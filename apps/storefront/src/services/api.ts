@@ -1,4 +1,4 @@
-import type { PaginatedResponse, StoreInfo, StoreProduct } from "../types";
+import type { PaginatedResponse, StoreInfo, StoreProduct, StoreTheme } from "../types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000/api";
 
@@ -17,6 +17,11 @@ async function get<T>(endpoint: string): Promise<T> {
 export const api = {
   getStoreInfo() {
     return get<{ data: StoreInfo }>("/store/settings");
+  },
+
+  /** Sin `key` devuelve el tema publicado; con `key` previsualiza otro sin publicarlo. */
+  getTheme(key?: string) {
+    return get<{ data: StoreTheme }>(`/store/theme${key ? `?key=${encodeURIComponent(key)}` : ""}`);
   },
 
   getProducts(search = "", page = 1) {

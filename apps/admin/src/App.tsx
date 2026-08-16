@@ -13,6 +13,7 @@ import { OrdersPage } from "./pages/admin/orders.page";
 import { CustomersPage } from "./pages/admin/customers.page";
 import { CouponsPage } from "./pages/admin/coupons.page";
 import { AnalyticsPage } from "./pages/admin/analytics.page";
+import { ThemesPage } from "./pages/admin/themes.page";
 import { SettingsPage } from "./pages/admin/settings.page";
 import { LoadingSpinner } from "./components/common/loading-spinner";
 import type { ReactNode } from "react";
@@ -71,6 +72,7 @@ export default function App() {
               <Route path="/admin/customers" element={<CustomersPage />} />
               <Route path="/admin/coupons" element={<CouponsPage />} />
               <Route path="/admin/analytics" element={<AnalyticsPage />} />
+              <Route path="/admin/themes" element={<ThemesPage />} />
               <Route path="/admin/settings" element={<SettingsPage />} />
             </Route>
 

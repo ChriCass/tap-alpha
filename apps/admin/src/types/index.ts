@@ -357,6 +357,20 @@ export interface StoreSetting {
   updated_at: string;
 }
 
+export interface ThemeSettings {
+  accent: string;
+  radius: string;
+}
+
+export interface Theme {
+  id: number;
+  name: string;
+  key: string;
+  description: string | null;
+  settings: ThemeSettings;
+  is_active: boolean;
+}
+
 export interface Analytics {
   revenue: { date: string; amount: number }[];
   orders_count: number;
