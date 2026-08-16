@@ -13,10 +13,18 @@ use Illuminate\Support\Facades\DB;
  */
 class Theme extends Model
 {
+    /** Las 3 secciones que compone hoy el Home de cualquier tema, en su orden de fábrica. */
+    public const DEFAULT_SECTIONS = [
+        ['key' => 'hero', 'visible' => true],
+        ['key' => 'search', 'visible' => true],
+        ['key' => 'grid', 'visible' => true],
+    ];
+
     /** Ajustes admitidos, con su valor por defecto si el tema no los define. */
     public const DEFAULT_SETTINGS = [
         'accent' => '#4f46e5',
         'radius' => '0.5rem',
+        'sections' => self::DEFAULT_SECTIONS,
     ];
 
     protected $fillable = [

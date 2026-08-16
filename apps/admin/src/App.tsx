@@ -14,6 +14,7 @@ import { CustomersPage } from "./pages/admin/customers.page";
 import { CouponsPage } from "./pages/admin/coupons.page";
 import { AnalyticsPage } from "./pages/admin/analytics.page";
 import { ThemesPage } from "./pages/admin/themes.page";
+import { ThemeEditorPage } from "./pages/admin/theme-editor.page";
 import { SettingsPage } from "./pages/admin/settings.page";
 import { LoadingSpinner } from "./components/common/loading-spinner";
 import type { ReactNode } from "react";
@@ -75,6 +76,16 @@ export default function App() {
               <Route path="/admin/themes" element={<ThemesPage />} />
               <Route path="/admin/settings" element={<SettingsPage />} />
             </Route>
+
+            {/* Editor de temas: a pantalla completa, sin el chrome del admin */}
+            <Route
+              path="/admin/themes/:id/editor"
+              element={
+                <ProtectedRoute>
+                  <ThemeEditorPage />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Redirects */}
             <Route path="/" element={<Navigate to="/admin" replace />} />
