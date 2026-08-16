@@ -4,9 +4,17 @@ export interface StoreInfo {
   phone: string | null;
 }
 
+export type HomeSectionKey = "hero" | "search" | "grid";
+
+export interface ThemeSection {
+  key: HomeSectionKey;
+  visible: boolean;
+}
+
 export interface ThemeSettings {
   accent: string;
   radius: string;
+  sections: ThemeSection[];
 }
 
 export interface StoreTheme {
